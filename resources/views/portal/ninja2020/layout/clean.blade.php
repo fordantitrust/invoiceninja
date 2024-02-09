@@ -46,9 +46,6 @@
                     ga('send', 'event', category, action, this.src);
                 }
             </script>
-            <script>
-                Vue.config.devtools = true;
-            </script>
         @else
             <script>
                 function gtag() {
@@ -73,8 +70,7 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
         <!-- Scripts -->
-        <script src="{{ mix('js/app.js') }}" defer></script>
-        <script src="{{ asset('vendor/alpinejs@2.8.2/alpine.js') }}" defer></script>
+        @vite('resources/js/app.js')
 
         <!-- Fonts -->
         <style>
@@ -90,7 +86,7 @@
         </style>
 
         <!-- Styles -->
-        <link href="{{ mix('css/app.css') }}" rel="stylesheet">
+        @vite('resources/sass/app.scss')
         @if(auth()->guard('contact')->user() && !auth()->guard('contact')->user()->user->account->isPaid())
         {{-- <link href="{{ mix('favicon.png') }}" rel="shortcut icon" type="image/png"> --}}
         @endif
@@ -116,7 +112,7 @@
 
         @yield('body')
 
-        @livewireScripts
+        @livewireScriptConfig 
 
         <script src="{{ asset('vendor/cookieconsent@3/cookieconsent.min.js') }}" data-cfasync="false"></script>
         <script>

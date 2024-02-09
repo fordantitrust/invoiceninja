@@ -11,7 +11,7 @@
 
 namespace App\Notifications\Ninja;
 
-use Illuminate\Notifications\Messages\MailMessage;
+use App\Models\Company;
 use Illuminate\Notifications\Messages\SlackMessage;
 use Illuminate\Notifications\Notification;
 
@@ -22,11 +22,8 @@ class EmailSpamNotification extends Notification
      *
      * @return void
      */
-    protected $account;
-
-    public function __construct($account)
+    public function __construct(protected Company $company)
     {
-        $this->account = $account;
     }
 
     /**
@@ -64,13 +61,13 @@ class EmailSpamNotification extends Notification
 
     public function toSlack($notifiable)
     {
-        $content = "Email SPAM notification for Account {$this->account->key} \n";
+        $content = "Email SPAM notification for Company {$this->company->company_key} \n";
 
-        $owner = $this->account->companies()->first()->owner();
+        $owner = $this->company->owner();
 
         $content .= "Owner {$owner->present()->name() } | {$owner->email}";
 
-        return (new SlackMessage)
+        return (new SlackMessage())
                 ->success()
                 ->from(ctrans('texts.notification_bot'))
                 ->image('https://app.invoiceninja.com/favicon.png')

@@ -12,6 +12,7 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\FilePermissionsFailure;
+use App\Models\Company;
 use App\Utils\Ninja;
 use App\Utils\Traits\AppSetup;
 use App\Utils\Traits\ClientGroupSettingsSaver;
@@ -61,10 +62,19 @@ class SelfUpdateController extends BaseController
 
         nlog('copying release file');
 
-        if (copy($this->getDownloadUrl(), storage_path("app/{$this->filename}"))) {
-            nlog('Copied file from URL');
-        } else {
+        $file_headers = @get_headers($this->getDownloadUrl());
+
+        if (stripos($file_headers[0], "404 Not Found") > 0  || (stripos($file_headers[0], "302 Found") > 0 && stripos($file_headers[7], "404 Not Found") > 0)) {
             return response()->json(['message' => 'Download not yet available. Please try again shortly.'], 410);
+        }
+
+        try {
+            if (copy($this->getDownloadUrl(), storage_path("app/{$this->filename}"))) {
+                nlog('Copied file from URL');
+            }
+        } catch(\Exception $e) {
+            nlog($e->getMessage());
+            return response()->json(['message' => 'File exists on the server, however there was a problem downloading and copying to the local filesystem'], 500);
         }
 
         nlog('Finished copying');
@@ -99,9 +109,32 @@ class SelfUpdateController extends BaseController
 
         $this->buildCache(true);
 
+        $this->runModelChecks();
+
         nlog('Called Artisan commands');
 
         return response()->json(['message' => 'Update completed'], 200);
+    }
+
+    private function runModelChecks()
+    {
+        Company::query()
+               ->cursor()
+               ->each(function ($company) {
+
+                   $settings = $company->settings;
+
+                   if(property_exists($settings->pdf_variables, 'purchase_order_details')) {
+                       return;
+                   }
+
+                   $pdf_variables = $settings->pdf_variables;
+                   $pdf_variables->purchase_order_details = [];
+                   $settings->pdf_variables = $pdf_variables;
+                   $company->settings = $settings;
+                   $company->save();
+
+               });
     }
 
     private function clearCacheDir()
@@ -136,7 +169,7 @@ class SelfUpdateController extends BaseController
         }
 
         $directoryIterator = null;
-        
+
         return true;
     }
 

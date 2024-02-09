@@ -19,28 +19,28 @@ class Rule extends BaseRule implements RuleInterface
 {
     /** @var string $seller_region */
     public string $seller_region = 'AU';
-    
+
     /** @var bool $consumer_tax_exempt */
     public bool $consumer_tax_exempt = false;
-    
+
     /** @var bool $business_tax_exempt */
     public bool $business_tax_exempt = false;
-    
+
     /** @var bool $eu_business_tax_exempt */
     public bool $eu_business_tax_exempt = true;
-    
+
     /** @var bool $foreign_business_tax_exempt */
     public bool $foreign_business_tax_exempt = false;
-    
+
     /** @var bool $foreign_consumer_tax_exempt */
     public bool $foreign_consumer_tax_exempt = false;
-    
+
     /** @var float $tax_rate */
     public float $tax_rate = 0;
-    
+
     /** @var float $reduced_tax_rate */
     public float $reduced_tax_rate = 0;
-    
+
     /**
      * Initializes the rules and builds any required data.
      *
@@ -49,10 +49,10 @@ class Rule extends BaseRule implements RuleInterface
     public function init(): self
     {
         $this->calculateRates();
-        
+
         return $this;
     }
-    
+
     /**
      * Sets the correct tax rate based on the product type.
      *
@@ -62,7 +62,7 @@ class Rule extends BaseRule implements RuleInterface
     public function taxByType($item): self
     {
 
-        if ($this->client->is_tax_exempt) {
+        if ($this->client->is_tax_exempt || !property_exists($item, 'tax_id')) {
             return $this->taxExempt($item);
         }
 
@@ -78,10 +78,10 @@ class Rule extends BaseRule implements RuleInterface
             Product::PRODUCT_TYPE_REVERSE_TAX => $this->reverseTax($item),
             default => $this->default($item),
         };
-        
+
         return $this;
     }
-    
+
     /**
      * Calculates the tax rate for a reduced tax product
      *
@@ -107,7 +107,7 @@ class Rule extends BaseRule implements RuleInterface
 
         return $this;
     }
-    
+
     /**
      * Calculates the tax rate for a zero rated tax product
      *
@@ -120,7 +120,7 @@ class Rule extends BaseRule implements RuleInterface
 
         return $this;
     }
-    
+
 
     /**
      * Calculates the tax rate for a tax exempt product
@@ -134,7 +134,7 @@ class Rule extends BaseRule implements RuleInterface
 
         return $this;
     }
-    
+
     /**
      * Calculates the tax rate for a digital product
      *
@@ -148,7 +148,7 @@ class Rule extends BaseRule implements RuleInterface
 
         return $this;
     }
-    
+
     /**
      * Calculates the tax rate for a service product
      *
@@ -162,7 +162,7 @@ class Rule extends BaseRule implements RuleInterface
 
         return $this;
     }
-    
+
     /**
      * Calculates the tax rate for a shipping product
      *
@@ -176,7 +176,7 @@ class Rule extends BaseRule implements RuleInterface
 
         return $this;
     }
-    
+
     /**
      * Calculates the tax rate for a physical product
      *
@@ -190,7 +190,7 @@ class Rule extends BaseRule implements RuleInterface
 
         return $this;
     }
-    
+
     /**
      * Calculates the tax rate for a default product
      *
@@ -198,13 +198,13 @@ class Rule extends BaseRule implements RuleInterface
      */
     public function default($item): self
     {
-        
+
         $this->tax_name1 = '';
         $this->tax_rate1 = 0;
 
         return $this;
     }
-    
+
     /**
      * Calculates the tax rate for an override product
      *
@@ -214,7 +214,7 @@ class Rule extends BaseRule implements RuleInterface
     {
         return $this;
     }
-    
+
     /**
      * Calculates the tax rates based on the client's location.
      *
@@ -223,9 +223,12 @@ class Rule extends BaseRule implements RuleInterface
     public function calculateRates(): self
     {
         if ($this->client->is_tax_exempt) {
-            // nlog("tax exempt");
+
             $this->tax_rate = 0;
             $this->reduced_tax_rate = 0;
+
+            return $this;
+        }
         // } elseif($this->client_subregion != $this->client->company->tax_data->seller_subregion && in_array($this->client_subregion, $this->eu_country_codes) && $this->client->has_valid_vat_number && $this->eu_business_tax_exempt) {
         //     nlog("euro zone and tax exempt");
         //     $this->tax_rate = 0;
@@ -246,10 +249,9 @@ class Rule extends BaseRule implements RuleInterface
         //         $this->tax_rate = $this->client->company->tax_data->regions->EU->subregions->{$this->client->company->country()->iso_3166_2}->tax_rate;
         //         $this->reduced_tax_rate = $this->client->company->tax_data->regions->EU->subregions->{$this->client->company->country()->iso_3166_2}->reduced_tax_rate;
         //     }
-        } else {
-            $this->tax_rate = $this->client->company->tax_data->regions->AU->subregions->{$this->client->company->country()->iso_3166_2}->tax_rate;
-            $this->reduced_tax_rate = $this->client->company->tax_data->regions->AU->subregions->{$this->client->company->country()->iso_3166_2}->reduced_tax_rate;
-        }
+
+        $this->tax_rate = $this->client->company->tax_data->regions->AU->subregions->{$this->client->company->country()->iso_3166_2}->tax_rate ?? 0;
+        $this->reduced_tax_rate = $this->client->company->tax_data->regions->AU->subregions->{$this->client->company->country()->iso_3166_2}->tax_rate ?? 0;
 
         return $this;
 

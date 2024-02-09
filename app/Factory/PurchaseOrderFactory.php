@@ -16,7 +16,7 @@ use App\Models\PurchaseOrder;
 
 class PurchaseOrderFactory
 {
-    public static function create(int $company_id, int $user_id, object $settings = null, Client $client = null) :PurchaseOrder
+    public static function create(int $company_id, int $user_id, object $settings = null, Client $client = null): PurchaseOrder
     {
         $purchase_order = new PurchaseOrder();
         $purchase_order->status_id = PurchaseOrder::STATUS_DRAFT;
@@ -49,6 +49,8 @@ class PurchaseOrderFactory
         $purchase_order->user_id = $user_id;
         $purchase_order->company_id = $company_id;
         $purchase_order->recurring_id = null;
+        $purchase_order->exchange_rate = 1;
+        $purchase_order->total_taxes = 0;
 
         return $purchase_order;
     }

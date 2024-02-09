@@ -13,18 +13,13 @@ namespace App\Services\PurchaseOrder;
 
 use App\Models\PurchaseOrder;
 use App\Utils\Traits\MakesHash;
-use App\Services\PurchaseOrder\SendEmail;
-use App\Jobs\Vendor\CreatePurchaseOrderPdf;
 
 class PurchaseOrderService
 {
     use MakesHash;
 
-    public PurchaseOrder $purchase_order;
-
-    public function __construct(PurchaseOrder $purchase_order)
+    public function __construct(public PurchaseOrder $purchase_order)
     {
-        $this->purchase_order = $purchase_order;
     }
 
     public function createInvitations()
@@ -48,7 +43,7 @@ class PurchaseOrderService
         if (! $this->purchase_order->design_id) {
             $this->purchase_order->design_id = $this->decodePrimaryKey($settings->purchase_order_design_id);
         }
-        
+
         if (!isset($this->purchase_order->footer) || empty($this->purchase_order->footer)) {
             $this->purchase_order->footer = $settings->purchase_order_footer;
         }
@@ -60,7 +55,7 @@ class PurchaseOrderService
         if (!isset($this->purchase_order->public_notes)  || empty($this->purchase_order->public_notes)) {
             $this->purchase_order->public_notes = $this->purchase_order->vendor->public_notes;
         }
-        
+
         if ($settings->counter_number_applied == 'when_saved') {
             $this->applyNumber()->save();
         }
@@ -101,27 +96,6 @@ class PurchaseOrderService
         return $this;
     }
 
-    public function touchPdf($force = false)
-    {
-        try {
-            if ($force) {
-                $this->purchase_order->invitations->each(function ($invitation) {
-                    (new CreatePurchaseOrderPdf($invitation))->handle();
-                });
-
-                return $this;
-            }
-
-            $this->purchase_order->invitations->each(function ($invitation) {
-                CreatePurchaseOrderPdf::dispatch($invitation);
-            });
-        } catch(\Exception $e) {
-            nlog("failed creating purchase orders in Touch PDF");
-        }
-
-        return $this;
-    }
-
     public function add_to_inventory()
     {
         if ($this->purchase_order->status_id >= PurchaseOrder::STATUS_RECEIVED) {
@@ -136,7 +110,7 @@ class PurchaseOrderService
     public function expense()
     {
         $this->markSent();
-        
+
         if ($this->purchase_order->expense()->exists()) {
             return $this;
         }
@@ -156,7 +130,7 @@ class PurchaseOrderService
 
     /**
      * Saves the purchase order.
-     * @return \App\Models\PurchaseOrder object
+     * @return \App\Models\PurchaseOrder
      */
     public function save(): ?PurchaseOrder
     {

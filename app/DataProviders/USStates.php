@@ -33859,8 +33859,6 @@ class USStates
         '99926' => 'AK',
         '99927' => 'AK',
         '99929' => 'AK',
-        '13021' => 'NY',
-        '13024' => 'NY',
         ];
 
     public static function get(): array
@@ -33870,18 +33868,21 @@ class USStates
 
     public static function getState(?string $zip = '90210'): string
     {
-        if(isset(self::$zip_code_map[$zip]))
+        if(isset(self::$zip_code_map[$zip])) {
             return self::$zip_code_map[$zip];
+        }
 
         $prefix_state = self::getStateFromThreeDigitPrefix($zip);
 
-        if($prefix_state)
+        if($prefix_state) {
             return $prefix_state;
+        }
 
         $zippo_response = self::getStateFromZippo($zip);
 
-        if($zippo_response)
+        if($zippo_response) {
             return $zippo_response;
+        }
 
         throw new \Exception('Zip code not found');
     }
@@ -33907,8 +33908,9 @@ class USStates
 
         $response = Http::get("https://api.zippopotam.us/us/{$zip}");
 
-        if($response->failed())
+        if($response->failed()) {
             return false;
+        }
 
         $data = $response->object();
 
@@ -33917,13 +33919,13 @@ class USStates
         }
 
         return false;
-        
+
     }
 
     public static function getStateFromThreeDigitPrefix($zip): mixed
     {
 
-    /* 000 to 999 */
+        /* 000 to 999 */
         $zip_by_state = [
         '--', '--', '--', '--', '--', 'NY', 'PR', 'PR', 'VI', 'PR', 'MA', 'MA', 'MA',
         'MA', 'MA', 'MA', 'MA', 'MA', 'MA', 'MA', 'MA', 'MA', 'MA', 'MA', 'MA', 'MA',
@@ -34006,7 +34008,7 @@ class USStates
 
         $prefix = substr($zip, 0, 3);
         $index = intval($prefix);
-         /* converts prefix to integer */
+        /* converts prefix to integer */
         return $zip_by_state[$index] == "--" ? false : $zip_by_state[$index];
 
     }

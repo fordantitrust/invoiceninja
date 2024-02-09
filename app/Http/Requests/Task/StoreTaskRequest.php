@@ -26,39 +26,58 @@ class StoreTaskRequest extends Request
      *
      * @return bool
      */
-    public function authorize() : bool
+    public function authorize(): bool
     {
-        return auth()->user()->can('create', Task::class);
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        return $user->can('create', Task::class);
     }
 
     public function rules()
     {
+
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
         $rules = [];
 
         if (isset($this->number)) {
-            $rules['number'] = Rule::unique('tasks')->where('company_id', auth()->user()->company()->id);
+            $rules['number'] = Rule::unique('tasks')->where('company_id', $user->company()->id);
         }
 
         if (isset($this->client_id)) {
-            $rules['client_id'] = 'bail|required|exists:clients,id,company_id,'.auth()->user()->company()->id.',is_deleted,0';
+            $rules['client_id'] = 'bail|required|exists:clients,id,company_id,'.$user->company()->id.',is_deleted,0';
         }
 
         if (isset($this->project_id)) {
-            $rules['project_id'] = 'bail|required|exists:projects,id,company_id,'.auth()->user()->company()->id.',is_deleted,0';
+            $rules['project_id'] = 'bail|required|exists:projects,id,company_id,'.$user->company()->id.',is_deleted,0';
         }
 
-        $rules['timelog'] = ['bail','array',function ($attribute, $values, $fail) {
+        $rules['hash'] = 'bail|sometimes|string|nullable';
+
+        $rules['time_log'] = ['bail',function ($attribute, $values, $fail) {
+
+            if(is_string($values)) {
+                $values = json_decode($values, true);
+            }
+
+            if(!is_array($values)) {
+                $fail('The '.$attribute.' must be a valid array.');
+                return;
+            }
+
             foreach ($values as $k) {
                 if (!is_int($k[0]) || !is_int($k[1])) {
-                    $fail('The '.$attribute.' - '.print_r($k, 1).' is invalid. Unix timestamps only.');
+                    return $fail('The '.$attribute.' - '.print_r($k, 1).' is invalid. Unix timestamps only.');
                 }
             }
 
             if (!$this->checkTimeLog($values)) {
-                $fail('Please correct overlapping values');
+                return $fail('Please correct overlapping values');
             }
         }];
-        
+
         if ($this->file('documents') && is_array($this->file('documents'))) {
             $rules['documents.*'] = $this->file_validation;
         } elseif ($this->file('documents')) {
@@ -77,7 +96,7 @@ class StoreTaskRequest extends Request
 
     public function prepareForValidation()
     {
-        $input = $this->all();
+
         $input = $this->decodePrimaryKeys($this->all());
 
         if (array_key_exists('status_id', $input) && is_string($input['status_id'])) {
@@ -101,6 +120,10 @@ class StoreTaskRequest extends Request
             if ($search_project_with_client) {
                 unset($input['project_id']);
             }
+        }
+
+        if(!isset($input['time_log']) || empty($input['time_log']) || $input['time_log'] == '{}') {
+            $input['time_log'] = json_encode([]);
         }
 
         $this->replace($input);

@@ -34,9 +34,6 @@
                     ga('send', 'event', category, action, this.src);
                 }
             </script>
-            <script>
-                Vue.config.devtools = true;
-            </script>
         @else
             <script>
                 function gtag() {
@@ -62,11 +59,10 @@
 
         <!-- Scripts -->
         @if(strpos(Request::url(),'setup') === false)
-        <script src="{{ mix('js/app.js') }}" defer></script>
+        @vite('resources/js/app.js')
         @else
         <script src="{{ str_replace("setup", "", Request::url())}}js/app.js" defer></script>
         @endif
-        <script src="{{ asset('vendor/alpinejs@2.8.2/alpine.js') }}" defer></script>
 
         <!-- Fonts -->
         {{-- <link rel="dns-prefetch" href="https://fonts.gstatic.com"> --}}
@@ -85,11 +81,11 @@
 
         <!-- Styles -->
         @if(strpos(Request::url(),'setup') === false)
-            <link href="{{ mix('css/app.css') }}" rel="stylesheet">
+            @vite('resources/sass/app.scss')
         @else
             <link href="{{ str_replace("setup", "", Request::url())}}css/app.css" rel="stylesheet">
         @endif
-        
+
         @if(auth()->guard('contact')->user() && !auth()->guard('contact')->user()->user->account->isPaid())
         {{-- <link href="{{ mix('favicon.png') }}" rel="shortcut icon" type="image/png"> --}}
         @endif

@@ -11,18 +11,17 @@
 
 namespace App\DataMapper\Tax;
 
-class TaxModel 
+class TaxModel
 {
-    
     /** @var string $seller_subregion */
     public string $seller_subregion = 'CA';
-    
+
     /** @var string $version */
     public string $version = 'alpha';
-    
+
     /** @var object $regions */
     public object $regions;
-    
+
     /**
      * __construct
      *
@@ -31,14 +30,15 @@ class TaxModel
      */
     public function __construct(public ?TaxModel $model = null)
     {
-        
-        if(!$this->model) 
+
+        if(!$this->model) {
             $this->regions = $this->init();
-        else
+        } else {
             $this->regions = $model;
+        }
 
     }
-    
+
     /**
      * Initializes the rules and builds any required data.
      *
@@ -57,7 +57,7 @@ class TaxModel
 
         return $this->regions;
     }
-    
+
     /**
      * Builds the model for Australian Taxes
      *
@@ -73,13 +73,13 @@ class TaxModel
 
         return $this;
     }
-    
+
     /**
      * Builds the model for Australian Subregions
      *
      * @return self
      */
-    private function auSubRegions(): self 
+    private function auSubRegions(): self
     {
 
         $this->regions->AU->subregions = new \stdClass();
@@ -90,7 +90,7 @@ class TaxModel
 
         return $this;
     }
-    
+
     /**
      * Builds the model for US Taxes
      *
@@ -104,7 +104,7 @@ class TaxModel
 
         return $this;
     }
-    
+
     /**
      * Builds the model for EU Taxes
      *
@@ -112,7 +112,7 @@ class TaxModel
      */
     private function euRegion(): self
     {
-     
+
         $this->regions->EU->has_sales_above_threshold = false;
         $this->regions->EU->tax_all_subregions = false;
         $this->regions->EU->tax_threshold = 10000;
@@ -120,7 +120,7 @@ class TaxModel
 
         return $this;
     }
-    
+
     /**
      * Builds the model for US States
      *
@@ -332,7 +332,7 @@ class TaxModel
 
         return $this;
     }
-    
+
     /**
      * Create the EU member countries
      *
@@ -340,7 +340,7 @@ class TaxModel
      */
     private function euSubRegions(): self
     {
-        
+
         $this->regions->EU->subregions = new \stdClass();
 
         $this->regions->EU->subregions->AT = new \stdClass();
@@ -387,7 +387,7 @@ class TaxModel
 
         $this->regions->EU->subregions->EE = new \stdClass();
         $this->regions->EU->subregions->EE->tax_rate = 20;
-        $this->regions->EU->subregions->EE->tax_name = 'KM';        
+        $this->regions->EU->subregions->EE->tax_name = 'KM';
         $this->regions->EU->subregions->EE->reduced_tax_rate = 9;
         $this->regions->EU->subregions->EE->apply_tax = false;
 

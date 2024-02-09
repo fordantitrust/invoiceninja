@@ -9,37 +9,39 @@
  * @license https://www.elastic.co/licensing/elastic-license
  */
 
-
 namespace App\Jobs\Invoice;
 
-use App\Utils\Ninja;
 use App\Models\Invoice;
-use Illuminate\Bus\Queueable;
-use Illuminate\Support\Facades\App;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Bus\Dispatchable;
 use App\Services\Invoice\EInvoice\FacturaEInvoice;
 use App\Services\Invoice\EInvoice\ZugferdEInvoice;
+use App\Utils\Ninja;
+use horstoeko\zugferd\ZugferdDocumentBuilder;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\App;
 
 class CreateEInvoice implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     public $deleteWhenMissingModels = true;
 
-    public function __construct(private Invoice $invoice, private bool $alterPDF, private string $custom_pdf_path = "")
+    public function __construct(private Invoice $invoice, private bool $returnObject = false)
     {
     }
 
     /**
      * Execute the job.
      *
-     *
-     * @return string
+     * @return string|ZugferdDocumentBuilder
      */
-    public function handle(): string
+    public function handle(): string|ZugferdDocumentBuilder
     {
         /* Forget the singleton*/
         App::forgetInstance('translator');
@@ -51,11 +53,13 @@ class CreateEInvoice implements ShouldQueue
 
         /* Set customized translations _NOW_ */
         $t->replace(Ninja::transformTranslations($this->invoice->client->getMergedSettings()));
-        
+
         $e_invoice_type = $this->invoice->client->getSetting('e_invoice_type');
-        
+
         switch ($e_invoice_type) {
             case "EN16931":
+            case "XInvoice_3_0":
+            case "XInvoice_2_3":
             case "XInvoice_2_2":
             case "XInvoice_2_1":
             case "XInvoice_2_0":
@@ -63,13 +67,18 @@ class CreateEInvoice implements ShouldQueue
             case "XInvoice-Extended":
             case "XInvoice-BasicWL":
             case "XInvoice-Basic":
-                return (new ZugferdEInvoice($this->invoice, $this->alterPDF, $this->custom_pdf_path))->run();
+                $zugferd = (new ZugferdEInvoice($this->invoice))->run();
+
+                return $this->returnObject ? $zugferd->xrechnung : $zugferd->getXml();
             case "Facturae_3.2":
             case "Facturae_3.2.1":
             case "Facturae_3.2.2":
                 return (new FacturaEInvoice($this->invoice, str_replace("Facturae_", "", $e_invoice_type)))->run();
             default:
-                return (new ZugferdEInvoice($this->invoice, $this->alterPDF, $this->custom_pdf_path))->run();
+
+                $zugferd = (new ZugferdEInvoice($this->invoice))->run();
+
+                return $this->returnObject ? $zugferd : $zugferd->getXml();
 
         }
 

@@ -11,26 +11,32 @@
 
 namespace App\Jobs\RecurringInvoice;
 
-use App\DataMapper\Analytics\SendRecurringFailure;
-use App\Factory\InvoiceInvitationFactory;
-use App\Factory\RecurringInvoiceToInvoiceFactory;
-use App\Jobs\Cron\AutoBill;
-use App\Jobs\Entity\EmailEntity;
+use Carbon\Carbon;
+use App\Utils\Ninja;
 use App\Models\Invoice;
+use App\Models\Webhook;
+use App\Jobs\Cron\AutoBill;
+use Illuminate\Bus\Queueable;
+use App\Utils\Traits\MakesHash;
+use App\Jobs\Entity\EmailEntity;
 use App\Models\RecurringInvoice;
 use App\Utils\Traits\GeneratesCounter;
-use App\Utils\Traits\MakesHash;
-use Carbon\Carbon;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Turbo124\Beacon\Facades\LightLogs;
+use Illuminate\Queue\InteractsWithQueue;
+use App\Events\Invoice\InvoiceWasCreated;
+use App\Factory\InvoiceInvitationFactory;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Bus\Dispatchable;
+use App\Factory\RecurringInvoiceToInvoiceFactory;
+use App\DataMapper\Analytics\SendRecurringFailure;
 
 class SendRecurring implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
     use GeneratesCounter;
     use MakesHash;
 
@@ -53,7 +59,7 @@ class SendRecurring implements ShouldQueue
      *
      * @return void
      */
-    public function handle() : void
+    public function handle(): void
     {
         // Generate Standard Invoice
         $invoice = RecurringInvoiceToInvoiceFactory::create($this->recurring_invoice, $this->recurring_invoice->client);
@@ -91,9 +97,6 @@ class SendRecurring implements ShouldQueue
 
         $invoice = $this->createRecurringInvitations($invoice);
 
-        /* 09-01-2022 ensure we create the PDFs at this point in time! */
-        $invoice->service()->touchPdf(true);
-
         /* Set next date here to prevent a recurring loop forming */
         $this->recurring_invoice->next_send_date = $this->recurring_invoice->nextSendDate();
         $this->recurring_invoice->next_send_date_client = $this->recurring_invoice->nextSendDateClient();
@@ -108,36 +111,61 @@ class SendRecurring implements ShouldQueue
         $this->recurring_invoice->save();
 
         event('eloquent.created: App\Models\Invoice', $invoice);
+        event(new InvoiceWasCreated($invoice, $invoice->company, Ninja::eventVars()));
 
         //auto bill, BUT NOT DRAFTS!!
         if ($invoice->auto_bill_enabled && $invoice->client->getSetting('auto_bill_date') == 'on_send_date' && $invoice->client->getSetting('auto_email_invoice')) {
             nlog("attempting to autobill {$invoice->number}");
             AutoBill::dispatch($invoice->id, $this->db, true)->delay(rand(1, 2));
-        } 
-        elseif ($invoice->auto_bill_enabled && $invoice->client->getSetting('auto_bill_date') == 'on_due_date' && $invoice->client->getSetting('auto_email_invoice') && ($invoice->due_date && Carbon::parse($invoice->due_date)->startOfDay()->lte(now()->startOfDay()))) {
+
+            //04-08-2023 edge case to support where online payment notifications are not enabled
+            if(!$invoice->client->getSetting('client_online_payment_notification')) {
+                $this->sendRecurringEmails($invoice);
+                $invoice->sendEvent(Webhook::EVENT_SENT_INVOICE, "client");
+            }
+        } elseif ($invoice->auto_bill_enabled && $invoice->client->getSetting('auto_bill_date') == 'on_due_date' && $invoice->client->getSetting('auto_email_invoice') && ($invoice->due_date && Carbon::parse($invoice->due_date)->startOfDay()->lte(now()->startOfDay()))) {
             nlog("attempting to autobill {$invoice->number}");
             AutoBill::dispatch($invoice->id, $this->db, true)->delay(rand(1, 2));
-        }
-        elseif ($invoice->client->getSetting('auto_email_invoice')) {
-            //Admin notification for recurring invoice sent.
-            if ($invoice->invitations->count() >= 1) {
-                $invoice->entityEmailEvent($invoice->invitations->first(), 'invoice', 'email_template_invoice');
+
+            //04-08-2023 edge case to support where online payment notifications are not enabled
+            if(!$invoice->client->getSetting('client_online_payment_notification')) {
+                $this->sendRecurringEmails($invoice);
+                $invoice->sendEvent(Webhook::EVENT_SENT_INVOICE, "client");
             }
 
-            $invoice->invitations->each(function ($invitation) use ($invoice) {
-                if ($invitation->contact && ! $invitation->contact->trashed() && strlen($invitation->contact->email) >= 1 && $invoice->client->getSetting('auto_email_invoice')) {
-                    try {
-                        EmailEntity::dispatch($invitation, $invoice->company)->delay(rand(1, 2));
-                    } catch (\Exception $e) {
-                        nlog($e->getMessage());
-                    }
-
-                    nlog("Firing email for invoice {$invoice->number}");
-                }
-            });
+        } elseif ($invoice->client->getSetting('auto_email_invoice')) {
+            $this->sendRecurringEmails($invoice);
+            $invoice->sendEvent(Webhook::EVENT_SENT_INVOICE, "client");
         }
 
-        
+    }
+
+    /**
+     * Sends the recurring invoice emails to
+     * the designated contacts
+     *
+     * @param Invoice $invoice
+     * @return void
+     */
+    private function sendRecurringEmails(Invoice $invoice): void
+    {
+        //Admin notification for recurring invoice sent.
+        if ($invoice->invitations->count() >= 1) {
+            $invoice->entityEmailEvent($invoice->invitations->first(), 'invoice', 'email_template_invoice');
+        }
+
+        $invoice->invitations->each(function ($invitation) use ($invoice) {
+            if ($invitation->contact && ! $invitation->contact->trashed() && strlen($invitation->contact->email) >= 1 && $invoice->client->getSetting('auto_email_invoice')) {
+                try {
+                    EmailEntity::dispatch($invitation, $invoice->company)->delay(rand(1, 2));
+                } catch (\Exception $e) {
+                    nlog($e->getMessage());
+                }
+
+                nlog("Firing email for invoice {$invoice->number}");
+            }
+        });
+
     }
 
     /**
@@ -145,10 +173,11 @@ class SendRecurring implements ShouldQueue
      * @param  Invoice $invoice
      * @return Invoice $invoice
      */
-    private function createRecurringInvitations($invoice) :Invoice
+    private function createRecurringInvitations($invoice): Invoice
     {
         if ($this->recurring_invoice->invitations->count() == 0) {
-            $this->recurring_invoice = $this->recurring_invoice->service()->createInvitations()->save();
+            $this->recurring_invoice->service()->createInvitations()->save();
+            $this->recurring_invoice = $this->recurring_invoice->fresh();
         }
 
         $this->recurring_invoice->invitations->each(function ($recurring_invitation) use ($invoice) {
@@ -176,17 +205,3 @@ class SendRecurring implements ShouldQueue
         nlog(print_r($exception->getMessage(), 1));
     }
 }
-
-
-/**
- *
- * 1/8/2022
- *
- * Improvements here include moving the emailentity and autobilling into the queue.
- *
- * Further improvements could using the CompanyRecurringCron.php stub which divides
- * the recurring invoices into companies and spins them off into their own queue to
- * improve parallel processing.
- *
- * Need to be careful we do not overload redis and OOM.
-*/

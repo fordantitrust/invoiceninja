@@ -29,7 +29,10 @@ class StorePurchaseOrderRequest extends Request
      */
     public function authorize()
     {
-        return auth()->user()->can('create', PurchaseOrder::class);
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        return $user->can('create', PurchaseOrder::class);
     }
     /**
      * Get the validation rules that apply to the request.
@@ -38,11 +41,14 @@ class StorePurchaseOrderRequest extends Request
      */
     public function rules()
     {
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
         $rules = [];
 
-        $rules['vendor_id'] = 'bail|required|exists:vendors,id,company_id,'.auth()->user()->company()->id.',is_deleted,0';
+        $rules['vendor_id'] = 'bail|required|exists:vendors,id,company_id,'.$user->company()->id.',is_deleted,0';
 
-        $rules['number'] = ['nullable', Rule::unique('purchase_orders')->where('company_id', auth()->user()->company()->id)];
+        $rules['number'] = ['nullable', Rule::unique('purchase_orders')->where('company_id', $user->company()->id)];
         $rules['discount']  = 'sometimes|numeric';
         $rules['is_amount_discount'] = ['boolean'];
         $rules['line_items'] = 'array';
@@ -60,7 +66,8 @@ class StorePurchaseOrderRequest extends Request
         }
 
         $rules['status_id'] = 'nullable|integer|in:1,2,3,4,5';
-        
+        $rules['exchange_rate'] = 'bail|sometimes|numeric';
+
         return $rules;
     }
 
@@ -76,6 +83,10 @@ class StorePurchaseOrderRequest extends Request
 
         $input['amount'] = 0;
         $input['balance'] = 0;
+
+        if (array_key_exists('exchange_rate', $input) && is_null($input['exchange_rate'])) {
+            $input['exchange_rate'] = 1;
+        }
 
         $this->replace($input);
     }

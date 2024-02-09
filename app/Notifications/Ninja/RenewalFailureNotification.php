@@ -11,7 +11,6 @@
 
 namespace App\Notifications\Ninja;
 
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Messages\SlackMessage;
 use Illuminate\Notifications\Notification;
 
@@ -42,7 +41,7 @@ class RenewalFailureNotification extends Notification
      * Get the mail representation of the notification.
      *
      * @param  mixed  $notifiable
-     * @return MailMessage
+     *
      */
     public function toMail($notifiable)
     {
@@ -65,8 +64,8 @@ class RenewalFailureNotification extends Notification
     {
         $content = "Plan paid, account not updated\n";
         $content .= "Contact/Inapp Purchase: {$this->notification_message}";
-        
-        return (new SlackMessage)
+
+        return (new SlackMessage())
                 ->success()
                 ->from(ctrans('texts.notification_bot'))
                 ->image('https://app.invoiceninja.com/favicon.png')

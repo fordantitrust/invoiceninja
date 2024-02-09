@@ -31,7 +31,10 @@ use League\Fractal\Resource\Item;
 
 class WebhookSingle implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     private $entity;
 
@@ -46,7 +49,7 @@ class WebhookSingle implements ShouldQueue
     private string $includes;
 
     private Company $company;
-    
+
     /**
      * Create a new job instance.
      *
@@ -63,31 +66,22 @@ class WebhookSingle implements ShouldQueue
 
     public function backoff()
     {
-        // return [15, 35, 65, 185, 3605];
         return [rand(10, 15), rand(30, 40), rand(60, 79), rand(160, 200), rand(3000, 5000)];
-
     }
 
     /**
      * Execute the job.
      *
-     * @return bool
      */
     public function handle()
     {
         MultiDB::setDb($this->db);
 
-        $subscription = Webhook::with('company')->find($this->subscription_id);
+        $subscription = Webhook::query()->with('company')->find($this->subscription_id);
 
-        if ($subscription) {
-            // nlog("firing event ID {$subscription->event_id} company_id {$subscription->company_id}");
-        }
-        
         if (!$subscription) {
             $this->fail();
-            
             nlog("failed to fire event, could not find webhook ID {$this->subscription_id}");
-
             return;
         }
 
@@ -106,7 +100,7 @@ class WebhookSingle implements ShouldQueue
 
         $resource = new Item($this->entity, $transformer, $this->entity->getEntityType());
         $data = $manager->createData($resource)->toArray();
-        
+
         $headers = is_array($subscription->headers) ? $subscription->headers : [];
 
         $this->postData($subscription, $data, $headers);
@@ -122,7 +116,9 @@ class WebhookSingle implements ShouldQueue
         $client = new Client(['headers' => array_merge($base_headers, $headers)]);
 
         try {
-            $response = $client->post($subscription->target_url, [
+            $verb = $subscription->rest_method ?? 'post';
+
+            $response = $client->{$verb}($subscription->target_url, [
                 RequestOptions::JSON => $data, // or 'json' => [...]
             ]);
 
@@ -149,8 +145,28 @@ class WebhookSingle implements ShouldQueue
             ))->handle();
         } catch (BadResponseException $e) {
             if ($e->getResponse()->getStatusCode() >= 400 && $e->getResponse()->getStatusCode() < 500) {
+
+                /* Some 400's should never be repeated */
+                if (in_array($e->getResponse()->getStatusCode(), [404, 410, 405])) {
+
+                    $message = "There was a problem when connecting to {$subscription->target_url} => status code ". $e->getResponse()->getStatusCode(). " This webhook call will be suspended until further action is taken.";
+
+                    (new SystemLogger(
+                        ['message' => $message],
+                        SystemLog::CATEGORY_WEBHOOK,
+                        SystemLog::EVENT_WEBHOOK_FAILURE,
+                        SystemLog::TYPE_WEBHOOK_RESPONSE,
+                        $this->resolveClient(),
+                        $this->company
+                    ))->handle();
+
+                    $subscription->delete();
+                    $this->fail();
+                    return;
+                }
+
                 $message = "There was a problem when connecting to {$subscription->target_url} => status code ". $e->getResponse()->getStatusCode();
-                
+
                 nlog($message);
 
                 (new SystemLogger(
@@ -162,13 +178,12 @@ class WebhookSingle implements ShouldQueue
                     $this->company
                 ))->handle();
 
-                /* Some 400's should never be repeated */
-                if (in_array($e->getResponse()->getStatusCode(), [404, 410])) {
+                if (in_array($e->getResponse()->getStatusCode(), [400])) {
                     $this->fail();
                     return;
                 }
 
-                $this->release($this->backoff()[$this->attempts()-1]);
+                $this->release($this->backoff()[$this->attempts() - 1]);
             }
 
             if ($e->getResponse()->getStatusCode() >= 500) {
@@ -228,7 +243,7 @@ class WebhookSingle implements ShouldQueue
             //add some entropy to the retry
             sleep(rand(0, 3));
 
-            $this->release($this->backoff()[$this->attempts()-1]);
+            $this->release($this->backoff()[$this->attempts() - 1]);
         }
     }
 

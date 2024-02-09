@@ -40,6 +40,7 @@ class ContactRegisterController extends Controller
             $key = request()->session()->has('company_key') ? request()->session()->get('company_key') : $company_key;
         }
 
+        /** @var \App\Models\Company $company **/
         $company = Company::where('company_key', $key)->firstOrFail();
 
         App::forgetInstance('translator');

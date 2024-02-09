@@ -11,47 +11,46 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use App\Utils\Ninja;
-use App\Models\Quote;
-use App\Models\Client;
-use App\Models\Credit;
-use App\Models\Vendor;
-use App\Models\Account;
-use App\Models\Company;
-use App\Models\Invoice;
-use App\Models\Payment;
-use App\Models\Product;
-use App\Models\PaymentHash;
-use App\Models\PaymentType;
-use Illuminate\Support\Str;
-use App\Models\CompanyToken;
-use App\Models\GroupSetting;
-use App\Models\ClientContact;
-use App\Models\VendorContact;
-use App\Models\CompanyGateway;
-use App\Models\BankIntegration;
-use App\Models\BankTransaction;
-use Illuminate\Database\Seeder;
-use App\Models\RecurringInvoice;
-use App\DataMapper\FeesAndLimits;
 use App\DataMapper\ClientSettings;
 use App\DataMapper\CompanySettings;
-use App\Helpers\Invoice\InvoiceSum;
-use Illuminate\Support\Facades\Hash;
-use App\Repositories\QuoteRepository;
-use Illuminate\Support\Facades\Cache;
-use App\Repositories\CreditRepository;
-use Illuminate\Support\Facades\Schema;
-use App\Repositories\InvoiceRepository;
-use Illuminate\Database\Eloquent\Model;
+use App\DataMapper\FeesAndLimits;
 use App\Events\Payment\PaymentWasCreated;
+use App\Helpers\Invoice\InvoiceSum;
 use App\Helpers\Invoice\InvoiceSumInclusive;
+use App\Models\Account;
+use App\Models\BankIntegration;
+use App\Models\BankTransaction;
+use App\Models\Client;
+use App\Models\ClientContact;
+use App\Models\Company;
+use App\Models\CompanyGateway;
+use App\Models\CompanyToken;
+use App\Models\Credit;
+use App\Models\GroupSetting;
+use App\Models\Invoice;
+use App\Models\Payment;
+use App\Models\PaymentHash;
+use App\Models\PaymentType;
+use App\Models\Product;
+use App\Models\Quote;
+use App\Models\RecurringInvoice;
+use App\Models\User;
+use App\Models\Vendor;
+use App\Models\VendorContact;
+use App\Repositories\CreditRepository;
+use App\Repositories\InvoiceRepository;
+use App\Repositories\QuoteRepository;
+use App\Utils\Ninja;
+use App\Utils\Traits\AppSetup;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class RandomDataSeeder extends Seeder
 {
     use \App\Utils\Traits\MakesHash;
-
+    use AppSetup;
     /**
      * Run the database seeds.
      *
@@ -59,40 +58,24 @@ class RandomDataSeeder extends Seeder
      */
     public function run()
     {
-        /* Warm up the cache !*/
-        $cached_tables = config('ninja.cached_tables');
 
-        foreach ($cached_tables as $name => $class) {
-            if (! Cache::has($name)) {
-                // check that the table exists in case the migration is pending
-                if (! Schema::hasTable((new $class())->getTable())) {
-                    continue;
-                }
-                if ($name == 'payment_terms') {
-                    $orderBy = 'num_days';
-                } elseif ($name == 'fonts') {
-                    $orderBy = 'sort_order';
-                } elseif (in_array($name, ['currencies', 'industries', 'languages', 'countries', 'banks'])) {
-                    $orderBy = 'name';
-                } else {
-                    $orderBy = 'id';
-                }
-                $tableData = $class::orderBy($orderBy)->get();
-                if ($tableData->count()) {
-                    Cache::forever($name, $tableData);
-                }
-            }
-        }
+        $this->buildCache(true);
 
         $this->command->info('Running RandomDataSeeder');
 
         Model::unguard();
 
         $faker = \Faker\Factory::create();
-
+        $settings= CompanySettings::defaults();
+        
+        $settings->name = "Random Test Company";
+        $settings->currency_id = '1';
+        $settings->language_id = '1';
+        
         $account = Account::factory()->create();
         $company = Company::factory()->create([
             'account_id' => $account->id,
+            'settings' => $settings,
         ]);
 
         $account->default_company_id = $company->id;
@@ -296,7 +279,6 @@ class RandomDataSeeder extends Seeder
 
                 // $payment->service()->updateInvoicePayment($payment_hash);
 
-                //            UpdateInvoicePayment::dispatchNow($payment, $payment->company);
             }
         });
 

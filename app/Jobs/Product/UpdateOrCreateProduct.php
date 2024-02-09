@@ -21,7 +21,10 @@ use Illuminate\Queue\SerializesModels;
 
 class UpdateOrCreateProduct implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     public $products;
 
@@ -66,8 +69,11 @@ class UpdateOrCreateProduct implements ShouldQueue
          * we do NOT update the product details this short block we
          * check for the presence of a task_id and/or expense_id
          */
-        $expense_count = count(array_column((array) $this->products, 'expense_id'));
-        $task_count = count(array_column((array) $this->products, 'task_id'));
+        // $expense_count = count(array_column((array) $this->products, 'expense_id'));
+        // $task_count = count(array_column((array) $this->products, 'task_id'));
+
+        $task_count = implode("", array_column((array) $this->products, 'task_id'));
+        $expense_count = implode("", array_column((array) $this->products, 'expense_id'));
 
         if ($task_count >= 1 || $expense_count >= 1) {
             return;
@@ -78,6 +84,7 @@ class UpdateOrCreateProduct implements ShouldQueue
             return $item->type_id == 1;
         });
 
+        /** @var \App\DataMapper\InvoiceItem $item */
         foreach ($updateable_products as $item) {
             if (empty($item->product_key)) {
                 continue;
@@ -106,29 +113,22 @@ class UpdateOrCreateProduct implements ShouldQueue
                 $product->quantity = isset($item->quantity) ? $item->quantity : 0;
             }
 
-            // $product->tax_name1 = isset($item->tax_name1) ? $item->tax_name1 : '';
-            // $product->tax_rate1 = isset($item->tax_rate1) ? $item->tax_rate1 : 0;
-            // $product->tax_name2 = isset($item->tax_name2) ? $item->tax_name2 : '';
-            // $product->tax_rate2 = isset($item->tax_rate2) ? $item->tax_rate2 : 0;
-            // $product->tax_name3 = isset($item->tax_name3) ? $item->tax_name3 : '';
-            // $product->tax_rate3 = isset($item->tax_rate3) ? $item->tax_rate3 : 0;
-
-            if (isset($item->custom_value1) && strlen($item->custom_value1) >=1) {
+            if (isset($item->custom_value1) && strlen($item->custom_value1) >= 1) {
                 $product->custom_value1 = $item->custom_value1;
             }
 
-            if (isset($item->custom_value2) && strlen($item->custom_value1) >=1) {
+            if (isset($item->custom_value2) && strlen($item->custom_value1) >= 1) {
                 $product->custom_value2 = $item->custom_value2;
             }
-            
-            if (isset($item->custom_value3) && strlen($item->custom_value1) >=1) {
+
+            if (isset($item->custom_value3) && strlen($item->custom_value1) >= 1) {
                 $product->custom_value3 = $item->custom_value3;
             }
-            
-            if (isset($item->custom_value4) && strlen($item->custom_value1) >=1) {
+
+            if (isset($item->custom_value4) && strlen($item->custom_value1) >= 1) {
                 $product->custom_value4 = $item->custom_value4;
             }
-                       
+
             $product->user_id = $this->invoice->user_id;
             $product->company_id = $this->invoice->company_id;
             $product->project_id = $this->invoice->project_id;

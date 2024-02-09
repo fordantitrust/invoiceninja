@@ -47,13 +47,13 @@ class UniqueInvoiceNumberRule implements Rule
     /**
      * @return bool
      */
-    private function checkIfInvoiceNumberUnique() : bool
+    private function checkIfInvoiceNumberUnique(): bool
     {
         if (empty($this->input['number'])) {
             return true;
         }
 
-        $invoice = Invoice::where('client_id', $this->input['client_id'])
+        $invoice = Invoice::query()->where('client_id', $this->input['client_id'])
                         ->where('number', $this->input['number'])
                         ->withTrashed()
                         ->exists();

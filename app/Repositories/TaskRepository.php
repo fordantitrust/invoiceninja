@@ -17,7 +17,7 @@ use App\Utils\Traits\GeneratesCounter;
 use Illuminate\Database\QueryException;
 
 /**
- * TaskRepository.
+ * App\Repositories\TaskRepository.
  */
 class TaskRepository extends BaseRepository
 {
@@ -45,7 +45,11 @@ class TaskRepository extends BaseRepository
         $task->saveQuietly();
 
         if ($this->new_task && ! $task->status_id) {
-            $this->setDefaultStatus($task);
+            $task->status_id = $this->setDefaultStatus($task);
+        }
+
+        if($this->new_task && (!$task->rate || $task->rate <= 0)) {
+            $task->rate = $task->getRate();
         }
 
         $task->number = empty($task->number) || ! array_key_exists('number', $data) ? $this->trySaving($task) : $data['number'];
@@ -97,12 +101,9 @@ class TaskRepository extends BaseRepository
         } else {
             $time_log = [];
         }
-        
+
         $key_values = array_column($time_log, 0);
         array_multisort($key_values, SORT_ASC, $time_log);
-
-        // array_multisort($time_log);
-        // ksort($time_log);
 
         if (isset($data['action'])) {
             if ($data['action'] == 'start') {
@@ -121,7 +122,11 @@ class TaskRepository extends BaseRepository
             $task->is_running = $data['is_running'] ? 1 : 0;
         }
 
+        $task->calculated_start_date = $this->harvestStartDate($time_log, $task);
+
         $task->time_log = json_encode($time_log);
+
+
 
         $task->saveQuietly();
 
@@ -132,17 +137,31 @@ class TaskRepository extends BaseRepository
         return $task;
     }
 
+    private function harvestStartDate($time_log, $task)
+    {
+
+        if(isset($time_log[0][0])) {
+            return \Carbon\Carbon::createFromTimestamp($time_log[0][0])->addSeconds($task->company->utc_offset());
+        }
+
+        return null;
+
+    }
+
     /**
      * Store tasks in bulk.
      *
      * @param array $task
-     * @return task|null
+     * @return Task|null
      */
     public function create($task): ?Task
     {
+        /** @var \App\Models\User $user **/
+        $user = auth()->user();
+
         return $this->save(
             $task,
-            TaskFactory::create(auth()->user()->company()->id, auth()->user()->id)
+            TaskFactory::create($user->company()->id, $user->id)
         );
     }
 
@@ -163,7 +182,7 @@ class TaskRepository extends BaseRepository
     /**
      * Sorts the task status order IF the old status has changed between requests
      *
-     * @param  stdCLass $old_task The old task object
+     * @param  \stdCLass $old_task The old task object
      * @param  Task     $new_task The new Task model
      * @return void
      */
@@ -199,8 +218,12 @@ class TaskRepository extends BaseRepository
         if (strlen($task->time_log) < 5) {
             $log = [];
 
-            $log = array_merge($log, [[time(), 0]]);
+            $start_time = time();
+
+            $log = array_merge($log, [[$start_time, 0]]);
             $task->time_log = json_encode($log);
+            $task->calculated_start_date = \Carbon\Carbon::createFromTimestamp($start_time)->addSeconds($task->company->utc_offset());
+
             $task->saveQuietly();
         }
 
@@ -255,7 +278,7 @@ class TaskRepository extends BaseRepository
 
     private function trySaving(Task $task)
     {
-        $x=1;
+        $x = 1;
 
         do {
             try {
@@ -265,7 +288,7 @@ class TaskRepository extends BaseRepository
             } catch(QueryException $e) {
                 $x++;
 
-                if ($x>50) {
+                if ($x > 50) {
                     $this->completed = false;
                 }
             }

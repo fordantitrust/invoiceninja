@@ -23,7 +23,10 @@ use Illuminate\Queue\SerializesModels;
 
 class WebhookHandler implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
 
     public $tries = 1; //number of retries
@@ -43,7 +46,6 @@ class WebhookHandler implements ShouldQueue
     /**
      * Execute the job.
      *
-     * @return bool
      */
     public function handle()
     {
@@ -54,11 +56,12 @@ class WebhookHandler implements ShouldQueue
             return true;
         }
 
-        Webhook::where('company_id', $this->company->id)
+        Webhook::query()
+                ->where('company_id', $this->company->id)
                 ->where('event_id', $this->event_id)
                 ->cursor()
                 ->each(function ($subscription) {
-                    WebhookSingle::dispatch($subscription->id, $this->entity, $this->company->db, $this->includes);
+                    (new WebhookSingle($subscription->id, $this->entity, $this->company->db, $this->includes))->handle();
                 });
     }
 

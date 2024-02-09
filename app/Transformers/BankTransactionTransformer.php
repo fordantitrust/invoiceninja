@@ -14,6 +14,8 @@ namespace App\Transformers;
 use App\Models\BankTransaction;
 use App\Models\Company;
 use App\Models\Expense;
+use App\Models\Payment;
+use App\Models\Vendor;
 use App\Utils\Traits\MakesHash;
 
 /**
@@ -26,13 +28,13 @@ class BankTransactionTransformer extends EntityTransformer
     /**
      * @var array
      */
-    protected $defaultIncludes = [
+    protected array $defaultIncludes = [
     ];
 
     /**
      * @var array
      */
-    protected $availableIncludes = [
+    protected array $availableIncludes = [
         'company',
         // 'expense',
         'payment',
@@ -61,11 +63,13 @@ class BankTransactionTransformer extends EntityTransformer
             'bank_account_id' => (int) $bank_transaction->bank_account_id,
             'status_id' => (string) $bank_transaction->status_id,
             'description' => (string) $bank_transaction->description ?: '',
+            'participant' => (string) $bank_transaction->participant ?: '',
+            'participant_name' => (string) $bank_transaction->participant_name ?: '',
             'base_type' => (string) $bank_transaction->base_type ?: '',
             'invoice_ids' => (string) $bank_transaction->invoice_ids ?: '',
-            'expense_id'=> (string) $bank_transaction->expense_id ?: '',
-            'payment_id'=> (string) $this->encodePrimaryKey($bank_transaction->payment_id) ?: '',
-            'vendor_id'=> (string) $this->encodePrimaryKey($bank_transaction->vendor_id) ?: '',
+            'expense_id' => (string) $bank_transaction->expense_id ?: '',
+            'payment_id' => (string) $this->encodePrimaryKey($bank_transaction->payment_id) ?: '',
+            'vendor_id' => (string) $this->encodePrimaryKey($bank_transaction->vendor_id) ?: '',
             'bank_transaction_rule_id' => (string) $this->encodePrimaryKey($bank_transaction->bank_transaction_rule_id) ?: '',
             'is_deleted' => (bool) $bank_transaction->is_deleted,
             'created_at' => (int) $bank_transaction->created_at,

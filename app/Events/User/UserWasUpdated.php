@@ -15,7 +15,6 @@ use App\Models\Company;
 use App\Models\User;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
@@ -24,7 +23,9 @@ use Illuminate\Queue\SerializesModels;
  */
 class UserWasUpdated
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
+    use Dispatchable;
+    use InteractsWithSockets;
+    use SerializesModels;
 
     public $user;
 
@@ -54,8 +55,8 @@ class UserWasUpdated
      *
      * @return Channel|array
      */
-     public function broadcastOn()
-     {
+    public function broadcastOn()
+    {
         return [];
-     }
+    }
 }

@@ -69,7 +69,7 @@ class BankTransactionRule extends BaseModel
 {
     use SoftDeletes;
     use Filterable;
-    
+
     protected $fillable = [
         'name',
         'rules',
@@ -88,9 +88,6 @@ class BankTransactionRule extends BaseModel
         'deleted_at' => 'timestamp',
     ];
 
-    protected $dates = [
-    ];
-    
     protected array $search_keys = [
         'description' => 'string',
         'amount' => 'number',
@@ -199,7 +196,7 @@ class BankTransactionRule extends BaseModel
     // private function searchVendor($rule, $bank_transaction)
     // {
     //     //search expenses
-        
+
 
     // }
 

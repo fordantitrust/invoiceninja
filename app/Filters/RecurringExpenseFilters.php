@@ -21,7 +21,7 @@ class RecurringExpenseFilters extends QueryFilters
     /**
      * Filter based on search text.
      *
-     * @param string query filter
+     * @param string $filter
      * @return Builder
      * @deprecated
      */
@@ -52,7 +52,7 @@ class RecurringExpenseFilters extends QueryFilters
     /**
      * Sorts the list based on $sort.
      *
-     * @param string sort formatted as column|asc
+     * @param string $sort formatted as column|asc
      * @return Builder
      */
     public function sort(string $sort = ''): Builder
@@ -63,13 +63,15 @@ class RecurringExpenseFilters extends QueryFilters
             return $this->builder;
         }
 
-        return $this->builder->orderBy($sort_col[0], $sort_col[1]);
+        $dir = ($sort_col[1] == 'asc') ? 'asc' : 'desc';
+
+        return $this->builder->orderBy($sort_col[0], $dir);
     }
 
     /**
      * Filters the query by the users company ID.
      *
-     * @return Illuminate\Eloquent\Builder
+     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function entityFilter(): Builder
     {

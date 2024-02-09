@@ -32,7 +32,11 @@ use Illuminate\Support\Facades\Storage;
 
 class ZipDocuments implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, MakesDates;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
+    use MakesDates;
 
     public $document_ids;
 
@@ -45,9 +49,9 @@ class ZipDocuments implements ShouldQueue
     public $tries = 1;
 
     /**
-     * @param $invoices
+     * @param array $document_ids
      * @param Company $company
-     * @param $email
+     * @param User $user
      * @deprecated confirm to be deleted
      * Create a new job instance.
      */
@@ -66,9 +70,6 @@ class ZipDocuments implements ShouldQueue
      * Execute the job.
      *
      * @return void
-     * @throws \ZipStream\Exception\FileNotFoundException
-     * @throws \ZipStream\Exception\FileNotReadableException
-     * @throws \ZipStream\Exception\OverflowException
      */
     public function handle()
     {
@@ -85,7 +86,7 @@ class ZipDocuments implements ShouldQueue
         $path = $this->company->file_path();
 
         try {
-            $documents = Document::whereIn('id', $this->document_ids)->get();
+            $documents = Document::query()->whereIn('id', $this->document_ids)->get();
 
             foreach ($documents as $document) {
                 $zipFile->addFromString($this->buildFileName($document), $document->getFile());
@@ -93,7 +94,7 @@ class ZipDocuments implements ShouldQueue
 
             Storage::put($path.$file_name, $zipFile->outputAsString());
 
-            $nmo = new NinjaMailerObject;
+            $nmo = new NinjaMailerObject();
             $nmo->mailable = new DownloadDocuments(Storage::url($path.$file_name), $this->company);
             $nmo->to_user = $this->user;
             $nmo->settings = $this->settings;
@@ -109,7 +110,7 @@ class ZipDocuments implements ShouldQueue
         }
     }
 
-    private function buildFileName($document) :string
+    private function buildFileName($document): string
     {
         $filename = $document->name;
 

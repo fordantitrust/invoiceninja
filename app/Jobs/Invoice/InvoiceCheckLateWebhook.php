@@ -24,7 +24,10 @@ use Illuminate\Queue\SerializesModels;
 
 class InvoiceCheckLateWebhook implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     /**
      * Create a new job instance.
@@ -41,7 +44,7 @@ class InvoiceCheckLateWebhook implements ShouldQueue
     public function handle()
     {
         nlog("sending overdue webhooks for invoices");
-        
+
         if (! config('ninja.db.multi_db_enabled')) {
             $company_ids = Webhook::where('event_id', Webhook::EVENT_LATE_INVOICE)
                                   ->where('is_deleted', 0)
@@ -64,7 +67,7 @@ class InvoiceCheckLateWebhook implements ShouldQueue
                  ->whereBetween('due_date', [now()->subDay()->startOfDay(), now()->startOfDay()->subSecond()])
                  ->cursor()
                  ->each(function ($invoice) {
-                     WebhookHandler::dispatch(Webhook::EVENT_LATE_INVOICE, $invoice, $invoice->company, 'client')->delay(now()->addSeconds(2));
+                     (new WebhookHandler(Webhook::EVENT_LATE_INVOICE, $invoice, $invoice->company, 'client'))->handle();
                  });
         } else {
             foreach (MultiDB::$dbs as $db) {
@@ -91,7 +94,7 @@ class InvoiceCheckLateWebhook implements ShouldQueue
                      ->whereBetween('due_date', [now()->subDay()->startOfDay(), now()->startOfDay()->subSecond()])
                      ->cursor()
                      ->each(function ($invoice) {
-                         WebhookHandler::dispatch(Webhook::EVENT_LATE_INVOICE, $invoice, $invoice->company, 'client')->delay(now()->addSeconds(2));
+                         (new WebhookHandler(Webhook::EVENT_LATE_INVOICE, $invoice, $invoice->company, 'client'))->handle();
                      });
             }
         }

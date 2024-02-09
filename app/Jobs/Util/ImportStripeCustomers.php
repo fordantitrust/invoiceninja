@@ -22,7 +22,10 @@ use Illuminate\Queue\SerializesModels;
 
 class ImportStripeCustomers implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     public $company;
 
@@ -44,19 +47,19 @@ class ImportStripeCustomers implements ShouldQueue
     /**
      * Execute the job.
      *
-     * @return bool
      */
     public function handle()
     {
         MultiDB::setDb($this->company->db);
 
-        $cgs = CompanyGateway::where('company_id', $this->company->id)
+        $cgs = CompanyGateway::query()
+                            ->where('company_id', $this->company->id)
                             ->where('is_deleted', 0)
                             ->whereIn('gateway_key', $this->stripe_keys)
                             ->get();
 
         $cgs->each(function ($company_gateway) {
-            $company_gateway->driver(new Client)->importCustomers();
+            $company_gateway->driver(new Client())->importCustomers();
         });
     }
 

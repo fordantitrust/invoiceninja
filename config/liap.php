@@ -1,17 +1,19 @@
 <?php
 
-use Imdhemy\Purchases\Events\AppStore\Refund;
-use Imdhemy\Purchases\Events\AppStore\DidRenew;
-use Imdhemy\Purchases\Events\AppStore\DidFailToRenew;
-use Imdhemy\Purchases\Events\GooglePlay\SubscriptionPaused;
-use Imdhemy\Purchases\Events\GooglePlay\SubscriptionExpired;
-use Imdhemy\Purchases\Events\GooglePlay\SubscriptionRenewed;
-use Imdhemy\Purchases\Events\GooglePlay\SubscriptionRevoked;
 use Imdhemy\Purchases\Events\AppStore\DidChangeRenewalStatus;
+use Imdhemy\Purchases\Events\AppStore\DidFailToRenew;
+use Imdhemy\Purchases\Events\AppStore\DidRenew;
+use Imdhemy\Purchases\Events\AppStore\InitialBuy;
+use Imdhemy\Purchases\Events\AppStore\InteractiveRenewal;
+use Imdhemy\Purchases\Events\AppStore\Refund;
 use Imdhemy\Purchases\Events\GooglePlay\SubscriptionCanceled;
+use Imdhemy\Purchases\Events\GooglePlay\SubscriptionExpired;
+use Imdhemy\Purchases\Events\GooglePlay\SubscriptionPaused;
 use Imdhemy\Purchases\Events\GooglePlay\SubscriptionPurchased;
 use Imdhemy\Purchases\Events\GooglePlay\SubscriptionRecovered;
+use Imdhemy\Purchases\Events\GooglePlay\SubscriptionRenewed;
 use Imdhemy\Purchases\Events\GooglePlay\SubscriptionRestarted;
+use Imdhemy\Purchases\Events\GooglePlay\SubscriptionRevoked;
 
 return [
     /*
@@ -118,6 +120,11 @@ return [
         SubscriptionPaused::class => class_exists(\Modules\Admin\Listeners\Subscription\GoogleSubscriptionPaused::class) ? [\Modules\Admin\Listeners\Subscription\GoogleSubscriptionPaused::class] : [],
         SubscriptionRevoked::class => class_exists(\Modules\Admin\Listeners\Subscription\GoogleSubscriptionRevoked::class) ? [\Modules\Admin\Listeners\Subscription\GoogleSubscriptionRevoked::class] : [],
         SubscriptionExpired::class => class_exists(\Modules\Admin\Listeners\Subscription\GoogleSubscriptionExpired::class) ? [\Modules\Admin\Listeners\Subscription\GoogleSubscriptionExpired::class] : [],
+        
+        Cancel::class => class_exists(\Modules\Admin\Listeners\Subscription\AppleCancel::class) ? [\Modules\Admin\Listeners\Subscription\AppleCancel::class] : [],
+        DidRecover::class => class_exists(\Modules\Admin\Listeners\Subscription\AppleRecover::class) ? [\Modules\Admin\Listeners\Subscription\AppleRecover::class] : [],
+        InitialBuy::class => class_exists(\Modules\Admin\Listeners\Subscription\AppleInitialBuy::class) ? [\Modules\Admin\Listeners\Subscription\AppleInitialBuy::class] : [],
+        InteractiveRenewal::class => class_exists(\Modules\Admin\Listeners\Subscription\AppleInteractiveRenewal::class) ? [\Modules\Admin\Listeners\Subscription\AppleInteractiveRenewal::class] : [],
     ],
 
     /*

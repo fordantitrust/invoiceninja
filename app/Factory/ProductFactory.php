@@ -15,9 +15,9 @@ use App\Models\Product;
 
 class ProductFactory
 {
-    public static function create(int $company_id, int $user_id) :Product
+    public static function create(int $company_id, int $user_id): Product
     {
-        $product = new Product;
+        $product = new Product();
         $product->company_id = $company_id;
         $product->user_id = $user_id;
 
@@ -34,9 +34,9 @@ class ProductFactory
         $product->custom_value2 = '';
         $product->custom_value3 = '';
         $product->custom_value4 = '';
-        $product->is_deleted = 0;
+        $product->is_deleted = false;
         $product->tax_id = 1;
-        
+
         return $product;
     }
 }

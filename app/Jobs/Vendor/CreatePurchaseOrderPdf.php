@@ -14,6 +14,7 @@ namespace App\Jobs\Vendor;
 use App\Exceptions\FilePermissionsFailure;
 use App\Libraries\MultiDB;
 use App\Models\Design;
+use App\Services\Pdf\PdfService;
 use App\Services\PdfMaker\Design as PdfDesignModel;
 use App\Services\PdfMaker\Design as PdfMakerDesign;
 use App\Services\PdfMaker\PdfMaker as PdfMakerService;
@@ -34,9 +35,18 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Storage;
 
+/** @deprecated 26-10-2023 5.7.30x */
 class CreatePurchaseOrderPdf implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, NumberFormatter, MakesInvoiceHtml, PdfMaker, MakesHash, PageNumbering;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
+    use NumberFormatter;
+    use MakesInvoiceHtml;
+    use PdfMaker;
+    use MakesHash;
+    use PageNumbering;
 
     public $entity;
 
@@ -65,7 +75,7 @@ class CreatePurchaseOrderPdf implements ShouldQueue
     {
         $this->invitation = $invitation;
         $this->company = $invitation->company;
-        
+
         $this->entity = $invitation->purchase_order;
         $this->entity_string = 'purchase_order';
 
@@ -73,12 +83,24 @@ class CreatePurchaseOrderPdf implements ShouldQueue
 
         $this->vendor = $invitation->contact->vendor;
         $this->vendor->load('company');
-        
+
         $this->disk = $disk ?? config('filesystems.default');
     }
 
     public function handle()
     {
+        /** Testing this override to improve PDF generation performance */
+        $ps = new PdfService($this->invitation, 'product', [
+            'client' => $this->entity->client ?? false,
+            'vendor' => $this->entity->vendor ?? false,
+            "{$this->entity_string}s" => [$this->entity],
+        ]);
+
+        nlog("returning purchase order");
+
+        return $ps->boot()->getPdf();
+
+
         $pdf = $this->rawPdf();
 
         if ($pdf) {
@@ -88,7 +110,7 @@ class CreatePurchaseOrderPdf implements ShouldQueue
                 throw new FilePermissionsFailure($e->getMessage());
             }
         }
-        
+
         return $this->file_path;
     }
 
@@ -102,17 +124,17 @@ class CreatePurchaseOrderPdf implements ShouldQueue
         /* Init a new copy of the translator*/
         $t = app('translator');
         /* Set the locale*/
-        App::setLocale($this->company->locale());
+        App::setLocale($this->vendor->locale());
 
         /* Set customized translations _NOW_ */
         $t->replace(Ninja::transformTranslations($this->company->settings));
 
         if (config('ninja.phantomjs_pdf_generation') || config('ninja.pdf_generator') == 'phantom') {
-            return (new Phantom)->generate($this->invitation, true);
+            return (new Phantom())->generate($this->invitation, true);
         }
 
         $entity_design_id = '';
-        
+
         $this->path = $this->vendor->purchase_order_filepath($this->invitation);
         $entity_design_id = 'purchase_order_design_id';
 
@@ -124,6 +146,7 @@ class CreatePurchaseOrderPdf implements ShouldQueue
 
         /* Catch all in case migration doesn't pass back a valid design */
         if (!$design) {
+            /** @var \App\Models\Design $design */
             $design = Design::find(2);
         }
 
@@ -153,6 +176,10 @@ class CreatePurchaseOrderPdf implements ShouldQueue
             'options' => [
                 'all_pages_header' => $this->entity->company->getSetting('all_pages_header'),
                 'all_pages_footer' => $this->entity->company->getSetting('all_pages_footer'),
+                'client' => null,
+                'vendor' => $this->vendor,
+                'entity' => $this->entity,
+                'variables' => $variables,
             ],
             'process_markdown' => $this->entity->company->markdown_enabled,
         ];
@@ -176,7 +203,7 @@ class CreatePurchaseOrderPdf implements ShouldQueue
                 }
             } else {
                 $pdf = $this->makePdf(null, null, $maker->getCompiledHTML(true));
-                
+
                 $numbered_pdf = $this->pageNumbering($pdf, $this->company);
 
                 if ($numbered_pdf) {
@@ -188,12 +215,12 @@ class CreatePurchaseOrderPdf implements ShouldQueue
         }
 
         if (config('ninja.log_pdf_html')) {
-            info($maker->getCompiledHTML());
+            nlog($maker->getCompiledHTML());
         }
 
         $maker = null;
         $state = null;
-        
+
         return $pdf;
     }
 

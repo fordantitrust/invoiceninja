@@ -47,7 +47,8 @@ use Illuminate\Support\Str;
 
 class CreateTestData extends Command
 {
-    use MakesHash, GeneratesCounter;
+    use MakesHash;
+    use GeneratesCounter;
 
     /**
      * @var string
@@ -60,6 +61,8 @@ class CreateTestData extends Command
     protected $signature = 'ninja:create-test-data {count=1}';
 
     protected $invoice_repo;
+
+    protected $count;
 
     /**
      * Execute the console command.
@@ -113,7 +116,7 @@ class CreateTestData extends Command
             ]);
         }
 
-        $company_token = new CompanyToken;
+        $company_token = new CompanyToken();
         $company_token->user_id = $user->id;
         $company_token->company_id = $company->id;
         $company_token->account_id = $account->id;
@@ -208,7 +211,7 @@ class CreateTestData extends Command
             ]);
         }
 
-        $company_token = new CompanyToken;
+        $company_token = new CompanyToken();
         $company_token->user_id = $user->id;
         $company_token->company_id = $company->id;
         $company_token->account_id = $account->id;
@@ -305,7 +308,7 @@ class CreateTestData extends Command
             ]);
         }
 
-        $company_token = new CompanyToken;
+        $company_token = new CompanyToken();
         $company_token->user_id = $user->id;
         $company_token->company_id = $company->id;
         $company_token->account_id = $account->id;
@@ -494,7 +497,7 @@ class CreateTestData extends Command
 
         $invoice = InvoiceFactory::create($client->company->id, $client->user->id); //stub the company and user_id
         $invoice->client_id = $client->id;
-//        $invoice->date = $faker->date();
+        //        $invoice->date = $faker->date();
         $dateable = Carbon::now()->subDays(rand(0, 90));
         $invoice->date = $dateable;
 

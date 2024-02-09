@@ -12,7 +12,6 @@
 namespace App\Http\Requests\ClientPortal;
 
 use App\Http\Requests\Request;
-use Zend\Diactoros\Response\JsonResponse;
 
 class StoreDocumentRequest extends Request
 {
@@ -21,7 +20,7 @@ class StoreDocumentRequest extends Request
      *
      * @return bool
      */
-    public function authorize() : bool
+    public function authorize(): bool
     {
         return true;
     }
@@ -35,6 +34,6 @@ class StoreDocumentRequest extends Request
 
     public function response(array $errors)
     {
-        return new JsonResponse(['error' => $errors], 400);
+        return response()->json(['error' => $errors], 400);
     }
 }

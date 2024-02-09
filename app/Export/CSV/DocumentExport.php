@@ -16,13 +16,12 @@ use App\Models\Company;
 use App\Models\Document;
 use App\Transformers\DocumentTransformer;
 use App\Utils\Ninja;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\App;
 use League\Csv\Writer;
 
 class DocumentExport extends BaseExport
 {
-    private Company $company;
-
     private $entity_transformer;
 
     public string $date_key = 'created_at';
@@ -31,14 +30,9 @@ class DocumentExport extends BaseExport
 
     public array $entity_keys = [
         'record_type' => 'record_type',
-        // 'record_name' => 'record_name',
         'name' => 'name',
         'type' => 'type',
         'created_at' => 'created_at',
-    ];
-
-    private array $decorate_keys = [
-
     ];
 
     public function __construct(Company $company, array $input)
@@ -48,27 +42,59 @@ class DocumentExport extends BaseExport
         $this->entity_transformer = new DocumentTransformer();
     }
 
-    public function run()
+    public function returnJson()
     {
+        $query = $this->init();
+
+        $headerdisplay = $this->buildHeader();
+
+        $header = collect($this->input['report_keys'])->map(function ($key, $value) use ($headerdisplay) {
+            return ['identifier' => $key, 'display_value' => $headerdisplay[$value]];
+        })->toArray();
+
+        $report = $query->cursor()
+                ->map(function ($document) {
+                    $row = $this->buildRow($document);
+                    return $this->processMetaData($row, $document);
+                })->toArray();
+
+        return array_merge(['columns' => $header], $report);
+    }
+
+    private function init(): Builder
+    {
+
         MultiDB::setDb($this->company->db);
         App::forgetInstance('translator');
         App::setLocale($this->company->locale());
         $t = app('translator');
         $t->replace(Ninja::transformTranslations($this->company->settings));
 
-        //load the CSV document from a string
-        $this->csv = Writer::createFromString();
-
         if (count($this->input['report_keys']) == 0) {
             $this->input['report_keys'] = array_values($this->entity_keys);
         }
 
-        //insert the header
-        $this->csv->insertOne($this->buildHeader());
-
         $query = Document::query()->where('company_id', $this->company->id);
 
         $query = $this->addDateRange($query);
+        
+        if($this->input['document_email_attachment'] ?? false) {
+            $this->queueDocuments($query);
+        }
+
+        return $query;
+
+    }
+
+    public function run()
+    {
+        $query = $this->init();
+
+        //load the CSV document from a string
+        $this->csv = Writer::createFromString();
+
+        //insert the header
+        $this->csv->insertOne($this->buildHeader());
 
         $query->cursor()
               ->each(function ($entity) {
@@ -78,7 +104,7 @@ class DocumentExport extends BaseExport
         return $this->csv->toString();
     }
 
-    private function buildRow(Document $document) :array
+    private function buildRow(Document $document): array
     {
         $transformed_entity = $this->entity_transformer->transform($document);
 
@@ -97,7 +123,7 @@ class DocumentExport extends BaseExport
         return $this->decorateAdvancedFields($document, $entity);
     }
 
-    private function decorateAdvancedFields(Document $document, array $entity) :array
+    private function decorateAdvancedFields(Document $document, array $entity): array
     {
         if (in_array('record_type', $this->input['report_keys'])) {
             $entity['record_type'] = class_basename($document->documentable);

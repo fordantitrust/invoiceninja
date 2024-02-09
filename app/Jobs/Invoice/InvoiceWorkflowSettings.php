@@ -12,7 +12,6 @@
 
 namespace App\Jobs\Invoice;
 
-use App\Models\Client;
 use App\Models\Invoice;
 use App\Repositories\BaseRepository;
 use Illuminate\Bus\Queueable;
@@ -23,9 +22,10 @@ use Illuminate\Queue\SerializesModels;
 
 class InvoiceWorkflowSettings implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-
-    public $invoice;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     public $client;
 
@@ -35,11 +35,9 @@ class InvoiceWorkflowSettings implements ShouldQueue
      * Create a new job instance.
      *
      * @param Invoice $invoice
-     * @param Client|null $client
      */
-    public function __construct(Invoice $invoice)
+    public function __construct(public Invoice $invoice)
     {
-        $this->invoice = $invoice;
         $this->base_repository = new BaseRepository();
     }
 

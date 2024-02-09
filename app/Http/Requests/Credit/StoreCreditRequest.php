@@ -31,7 +31,10 @@ class StoreCreditRequest extends Request
      */
     public function authorize()
     {
-        return auth()->user()->can('create', Credit::class);
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        return $user->can('create', Credit::class);
     }
 
     /**
@@ -55,10 +58,13 @@ class StoreCreditRequest extends Request
             $rules['file'] = $this->file_validation;
         }
 
-        $rules['client_id'] = 'required|exists:clients,id,company_id,'.auth()->user()->company()->id;
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        $rules['client_id'] = 'required|exists:clients,id,company_id,'.$user->company()->id;
 
         // $rules['number'] = new UniqueCreditNumberRule($this->all());
-        $rules['number'] = ['nullable', Rule::unique('credits')->where('company_id', auth()->user()->company()->id)];
+        $rules['number'] = ['nullable', Rule::unique('credits')->where('company_id', $user->company()->id)];
         $rules['discount'] = 'sometimes|numeric';
         $rules['is_amount_discount'] = ['boolean'];
         $rules['tax_rate1'] = 'bail|sometimes|numeric';
@@ -67,7 +73,8 @@ class StoreCreditRequest extends Request
         $rules['tax_name1'] = 'bail|sometimes|string|nullable';
         $rules['tax_name2'] = 'bail|sometimes|string|nullable';
         $rules['tax_name3'] = 'bail|sometimes|string|nullable';
-        
+        $rules['exchange_rate'] = 'bail|sometimes|numeric';
+
         if ($this->invoice_id) {
             $rules['invoice_id'] = new ValidInvoiceCreditRule();
         }
@@ -88,7 +95,11 @@ class StoreCreditRequest extends Request
         $input = $this->decodePrimaryKeys($input);
 
         $input['line_items'] = isset($input['line_items']) ? $this->cleanItems($input['line_items']) : [];
-        //$input['line_items'] = json_encode($input['line_items']);
+
+        if (array_key_exists('exchange_rate', $input) && is_null($input['exchange_rate'])) {
+            $input['exchange_rate'] = 1;
+        }
+
         $this->replace($input);
     }
 }

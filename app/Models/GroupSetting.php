@@ -11,11 +11,10 @@
 
 namespace App\Models;
 
-use App\Models\Filterable;
 use App\Utils\Traits\MakesHash;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\ModelNotFoundException as ModelNotFoundException;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * App\Models\GroupSetting
@@ -63,7 +62,7 @@ class GroupSetting extends StaticModel
     use MakesHash;
     use SoftDeletes;
     use Filterable;
-    
+
     protected $casts = [
         'settings' => 'object',
         'updated_at' => 'timestamp',
@@ -102,7 +101,10 @@ class GroupSetting extends StaticModel
         return $this->hasMany(Client::class, 'id', 'group_settings_id');
     }
 
-    public function documents()
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\MorphMany<Document>
+     */
+    public function documents(): \Illuminate\Database\Eloquent\Relations\MorphMany
     {
         return $this->morphMany(Document::class, 'documentable');
     }

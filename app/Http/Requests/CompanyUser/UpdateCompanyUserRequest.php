@@ -23,9 +23,12 @@ class UpdateCompanyUserRequest extends Request
      *
      * @return bool
      */
-    public function authorize() : bool
+    public function authorize(): bool
     {
-        return auth()->user()->isAdmin() || (auth()->user()->id == $this->user->id);
+        /** @var \App\Models\User $auth_user */
+        $auth_user = auth()->user();
+
+        return $auth_user->isAdmin() || ($auth_user->id == $this->user->id);
     }
 
     public function rules()

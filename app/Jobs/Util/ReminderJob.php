@@ -13,6 +13,7 @@ namespace App\Jobs\Util;
 
 use App\Utils\Ninja;
 use App\Models\Invoice;
+use App\Models\Webhook;
 use App\Libraries\MultiDB;
 use Illuminate\Bus\Queueable;
 use Illuminate\Support\Carbon;
@@ -99,7 +100,6 @@ class ReminderJob implements ShouldQueue
                          $query->where('is_disabled', 0);
                      })
                      ->with('invitations')->chunk(50, function ($invoices) {
-                         // if ($invoice->refresh() && $invoice->isPayable()) {
 
                          foreach ($invoices as $invoice) {
                              $this->sendReminderForInvoice($invoice);
@@ -130,12 +130,11 @@ class ReminderJob implements ShouldQueue
             $invoice->service()->touchReminder($reminder_template)->save();
             $fees = $this->calcLateFee($invoice, $reminder_template);
 
-            if(in_array($invoice->client->getSetting('lock_invoices'), ['when_sent','when_paid'])) {
+            if($invoice->isLocked()) {
                 return $this->addFeeToNewInvoice($invoice, $reminder_template, $fees);
             }
-            else
-                $invoice = $this->setLateFee($invoice, $fees[0], $fees[1]);
 
+            $invoice = $this->setLateFee($invoice, $fees[0], $fees[1]);
 
             //20-04-2022 fixes for endless reminders - generic template naming was wrong
             $enabled_reminder = 'enable_'.$reminder_template;
@@ -152,6 +151,7 @@ class ReminderJob implements ShouldQueue
                         EmailEntity::dispatch($invitation, $invitation->company, $reminder_template);
                         nlog("Firing reminder email for invoice {$invoice->number} - {$reminder_template}");
                         $invoice->entityEmailEvent($invitation, $reminder_template);
+                        $invoice->sendEvent(Webhook::EVENT_REMIND_INVOICE, "client");
                     }
                 });
             }
@@ -162,7 +162,7 @@ class ReminderJob implements ShouldQueue
         }
     }
 
-    private function addFeeToNewInvoice(Invoice $over_due_invoice, string $reminder_template, array $fees): void
+    private function addFeeToNewInvoice(Invoice $over_due_invoice, string $reminder_template, array $fees)
     {
 
         $amount = $fees[0];
@@ -187,7 +187,7 @@ class ReminderJob implements ShouldQueue
         $invoice->client_id = $over_due_invoice->client_id;
         $invoice->date = now()->format('Y-m-d');
         $invoice->due_date = now()->format('Y-m-d');
-                
+
         $invoice_item = new InvoiceItem();
         $invoice_item->type_id = '5';
         $invoice_item->product_key = trans('texts.fee');
@@ -207,8 +207,6 @@ class ReminderJob implements ShouldQueue
                 ->applyNumber()
                 ->markSent()
                 ->save();
-        
-        $invoice->service()->touchPdf(true);
 
         $enabled_reminder = 'enable_'.$reminder_template;
         if ($reminder_template == 'endless_reminder') {
@@ -224,6 +222,7 @@ class ReminderJob implements ShouldQueue
                     EmailEntity::dispatch($invitation, $invitation->company, $reminder_template);
                     nlog("Firing reminder email for invoice {$invoice->number} - {$reminder_template}");
                     $invoice->entityEmailEvent($invitation, $reminder_template);
+                    $invoice->sendEvent(Webhook::EVENT_REMIND_INVOICE, "client");
                 }
             });
         }
@@ -268,7 +267,6 @@ class ReminderJob implements ShouldQueue
         }
 
         return [$late_fee_amount, $late_fee_percent];
-        // return $this->setLateFee($invoice, $late_fee_amount, $late_fee_percent);
     }
 
     /**
@@ -311,13 +309,9 @@ class ReminderJob implements ShouldQueue
 
         /**Refresh Invoice values*/
         $invoice = $invoice->calc()->getInvoice();
-        // $invoice->service()->deletePdf(); 24-11-2022 no need to delete here because we regenerate later anyway
 
-        nlog('adjusting client balance and invoice balance by #'.$invoice->number.' '.($invoice->balance - $temp_invoice_balance));
-        $invoice->client->service()->updateBalance($invoice->balance - $temp_invoice_balance);
         $invoice->ledger()->updateInvoiceBalance($invoice->balance - $temp_invoice_balance, "Late Fee Adjustment for invoice {$invoice->number}");
-
-        $invoice->service()->touchPdf(true);
+        $invoice->client->service()->calculateBalance();
 
         return $invoice;
     }

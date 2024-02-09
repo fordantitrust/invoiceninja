@@ -15,13 +15,13 @@ use App\DataMapper\Tax\ZipTax\Response;
 
 /**
  * InvoiceTaxData
- * 
+ *
  * Definition for the invoice tax data structure
  */
 class TaxData
 {
     public int $updated_at;
-    
+
     public function __construct(public Response $origin)
     {
         foreach($origin as $key => $value) {

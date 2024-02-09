@@ -11,6 +11,7 @@
 
 namespace App\Models;
 
+use App\Jobs\Entity\CreateRawPdf;
 use App\Jobs\Util\WebhookHandler;
 use App\Models\Traits\Excludable;
 use App\Utils\Traits\MakesHash;
@@ -25,35 +26,50 @@ use Illuminate\Support\Str;
  * Class BaseModel
  *
  * @method scope() static
+ * @method company() static
  * @package App\Models
  * @property-read mixed $hashed_id
  * @property string $number
  * @property int $company_id
+ * @property int $id
+ * @property int $user_id
+ * @property int $assigned_user_id
+ * @method BaseModel service()
  * @property \App\Models\Company $company
+ * @method static BaseModel find($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|BaseModel<static> company()
  * @method static \Illuminate\Database\Eloquent\Builder|BaseModel|Illuminate\Database\Eloquent\Relations\BelongsTo|\Awobaz\Compoships\Database\Eloquent\Relations\BelongsTo|\App\Models\Company company()
+ * @method static \Illuminate\Database\Eloquent\Builder|BaseModel|Illuminate\Database\Eloquent\Relations\HasMany|BaseModel orderBy()
+ * @method static \Illuminate\Database\Eloquent\Builder|BaseModel on(?string $connection = null)
  * @method static \Illuminate\Database\Eloquent\Builder|BaseModel exclude($columns)
- * @method static \Illuminate\Database\Eloquent\Builder|BaseModel with()
- * @method static \Illuminate\Database\Eloquent\Builder|BaseModel newModelQuery()
- * @method static \Illuminate\Database\Eloquent\Builder|BaseModel newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|BaseModel with($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|BaseModel newModelQuery($query)
+ * @method static \Illuminate\Database\Eloquent\Builder|BaseModel newQuery($query)
  * @method static \Illuminate\Database\Eloquent\Builder|BaseModel query()
- * @method static \Illuminate\Database\Eloquent\Builder|BaseModel exclude(array $excludeable)
- * @method static \Illuminate\Database\Eloquent\Builder|BaseModel withTrashed()
- * @method static \Illuminate\Database\Eloquent\Builder|BaseModel scopeExclude()
- * @method static \Illuminate\Database\Eloquent\Builder|BaseModel find() 
- * @method static \Illuminate\Database\Eloquent\Builder|BaseModel whereIn()
- * @method static \Illuminate\Database\Eloquent\Builder|BaseModel where()
+ * @method static \Illuminate\Database\Eloquent\Builder|BaseModel whereId($query)
+ * @method static \Illuminate\Database\Eloquent\Builder|BaseModel whereIn($query)
+ * @method static \Illuminate\Database\Eloquent\Builder|BaseModel where($query)
  * @method static \Illuminate\Database\Eloquent\Builder|BaseModel count()
- * @method static \Illuminate\Database\Eloquent\Builder|BaseModel create()
- * @method static \Illuminate\Database\Eloquent\Builder|BaseModel insert()
- * @method static \Illuminate\Database\Eloquent\Builder|BaseModel whereHas()
- * @method static \Illuminate\Database\Eloquent\Builder|BaseModel withTrashed()
- * 
- * @method \App\Models\Company company()
+ * @method static \Illuminate\Database\Eloquent\Builder|BaseModel create($query)
+ * @method static \Illuminate\Database\Eloquent\Builder|BaseModel insert($query)
+ * @method static \Illuminate\Database\Eloquent\Builder|BaseModel orderBy($column, $direction)
+ * @method static \Illuminate\Database\Eloquent\Builder|BaseModel invitations()
+ * @method static \Illuminate\Database\Eloquent\Builder|BaseModel whereHas($query)
+ * @method static \Illuminate\Database\Eloquent\Builder|BaseModel without($query)
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\InvoiceInvitation | \App\Models\CreditInvitation | \App\Models\QuoteInvitation | \App\Models\RecurringInvoiceInvitation> $invitations
+ * @property-read int|null $invitations_count
  * @method int companyId()
- * @method Builder|static exclude($columns)
- * @method static \Illuminate\Database\Eloquent\Builder exclude(array $columns)
+ * @method createInvitations()
+ * @method Builder scopeCompany(Builder $builder)
+ * @method static \Illuminate\Database\Eloquent\Builder<static> company()
+ * @method static \Illuminate\Database\Eloquent\Builder|BaseModel|\Illuminate\Database\Query\Builder withTrashed(bool $withTrashed = true)
+ * @method static \Illuminate\Database\Eloquent\Builder|BaseModel|\Illuminate\Database\Query\Builder onlyTrashed()
+ * @method static \Illuminate\Database\Eloquent\Builder|BaseModel|\Illuminate\Database\Query\Builder withoutTrashed()
  * @mixin \Eloquent
  * @mixin \Illuminate\Database\Eloquent\Builder
+ *
+ * @property \Illuminate\Support\Collection $tax_map
+ * @property array $total_tax_map
  */
 class BaseModel extends Model
 {
@@ -81,34 +97,31 @@ class BaseModel extends Model
 
     public function dateMutator($value)
     {
-        if (! empty($value)) {
-            return (new Carbon($value))->format('Y-m-d');
-        }
-
-        return $value;
+        return (new Carbon($value))->format('Y-m-d');
     }
 
-    public function __call($method, $params)
-    {
-        $entity = strtolower(class_basename($this));
+    // public function __call($method, $params)
+    // {
+    //     $entity = strtolower(class_basename($this));
 
-        if ($entity) {
-            $configPath = "modules.relations.$entity.$method";
+    //     if ($entity) {
+    //         $configPath = "modules.relations.$entity.$method";
 
-            if (config()->has($configPath)) {
-                $function = config()->get($configPath);
+    //         if (config()->has($configPath)) {
+    //             $function = config()->get($configPath);
 
-                return call_user_func_array([$this, $function[0]], $function[1]);
-            }
-        }
+    //             return call_user_func_array([$this, $function[0]], $function[1]);
+    //         }
+    //     }
 
-        return parent::__call($method, $params);
-    }
+    //     return parent::__call($method, $params);
+    // }
 
-    /*
-    V2 type of scope
-     */
-    public function scopeCompany($query)
+    /**
+    * @param  \Illuminate\Database\Eloquent\Builder  $query
+    * @return \Illuminate\Database\Eloquent\Builder
+    */
+    public function scopeCompany($query): \Illuminate\Database\Eloquent\Builder
     {
         /** @var \App\Models\User $user */
         $user = auth()->user();
@@ -118,8 +131,8 @@ class BaseModel extends Model
         return $query;
     }
 
-    /*
-     V1 type of scope
+    /**
+     * @deprecated version
      */
     public function scopeScope($query)
     {
@@ -219,6 +232,30 @@ class BaseModel extends Model
         return $this->numberFormatter().'.'.$extension;
     }
 
+    public function getDeliveryNoteName($extension = 'pdf')
+    {
+
+        $number =  ctrans("texts.delivery_note"). "_" . $this->numberFormatter().'.'.$extension;
+
+        $formatted_number =  mb_ereg_replace("([^\w\s\d\-_~,;\[\]\(\).])", '', $number);
+
+        $formatted_number = mb_ereg_replace("([\.]{2,})", '', $formatted_number);
+
+        $formatted_number = preg_replace('/\s+/', '_', $formatted_number);
+
+        return \Illuminate\Support\Str::ascii($formatted_number);
+
+    }
+
+    /**
+    * @param string $extension
+    * @return string
+    */
+    public function getEFileName($extension = 'pdf')
+    {
+        return ctrans("texts.e_invoice"). "_" . $this->numberFormatter().'.'.$extension;
+    }
+
     public function numberFormatter()
     {
         $number = strlen($this->number) >= 1 ? $this->translate_entity() . "_" . $this->number : class_basename($this) . "_" . Str::random(5);
@@ -229,7 +266,7 @@ class BaseModel extends Model
 
         $formatted_number = preg_replace('/\s+/', '_', $formatted_number);
 
-        return $formatted_number;
+        return \Illuminate\Support\Str::ascii($formatted_number);
     }
 
     public function translate_entity()
@@ -250,9 +287,53 @@ class BaseModel extends Model
         $subscriptions = Webhook::where('company_id', $this->company_id)
                                  ->where('event_id', $event_id)
                                  ->exists();
-                            
+
         if ($subscriptions) {
-            WebhookHandler::dispatch($event_id, $this, $this->company, $additional_data);
+            WebhookHandler::dispatch($event_id, $this->withoutRelations(), $this->company, $additional_data);
         }
+    }
+
+    /**
+     * Returns the base64 encoded PDF string of the entity
+     * @deprecated - unused implementation
+     */
+    public function fullscreenPdfViewer($invitation = null): string
+    {
+
+        if (! $invitation) {
+            if ($this->invitations()->exists()) {
+                $invitation = $this->invitations()->first();
+            } else {
+                $this->service()->createInvitations();
+                $invitation = $this->invitations()->first();
+            }
+        }
+
+        if (! $invitation) {
+            throw new \Exception('Hard fail, could not create an invitation.');
+        }
+
+        return "data:application/pdf;base64,".base64_encode((new CreateRawPdf($invitation))->handle());
+
+    }
+    
+    /**
+     * Takes a entity prop as first argument
+     * along with an array of variables and performs
+     * a string replace on the prop.
+     *
+     * @param string $field
+     * @param array $variables
+     * @return string
+     */
+    public function parseHtmlVariables(string $field, array $variables): string
+    {
+        if(!$this->{$field})
+            return '';
+        
+        $section = strtr($this->{$field}, $variables['labels']);
+
+        return strtr($section, $variables['values']);
+
     }
 }

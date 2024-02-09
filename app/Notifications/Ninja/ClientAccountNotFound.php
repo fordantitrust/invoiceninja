@@ -11,7 +11,6 @@
 
 namespace App\Notifications\Ninja;
 
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Messages\SlackMessage;
 use Illuminate\Notifications\Notification;
 
@@ -42,7 +41,7 @@ class ClientAccountNotFound extends Notification
      * Get the mail representation of the notification.
      *
      * @param  mixed  $notifiable
-     * @return MailMessage
+     *
      */
     public function toMail($notifiable)
     {
@@ -67,7 +66,7 @@ class ClientAccountNotFound extends Notification
         $content .= "Account: {$this->account_key }\n";
         $content .= "Email: {$this->email}\n";
 
-        return (new SlackMessage)
+        return (new SlackMessage())
                 ->success()
                 ->from(ctrans('texts.notification_bot'))
                 ->image('https://app.invoiceninja.com/favicon.png')

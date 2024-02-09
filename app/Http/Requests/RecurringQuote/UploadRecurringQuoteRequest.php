@@ -1,10 +1,10 @@
 <?php
 /**
- * Quote Ninja (https://paymentninja.com).
+ * Invoice Ninja (https://invoiceninja.com).
  *
- * @link https://github.com/paymentninja/paymentninja source repository
+ * @link https://github.com/invoiceninja/invoiceninja source repository
  *
- * @copyright Copyright (c) 2022. Quote Ninja LLC (https://paymentninja.com)
+ * @copyright Copyright (c) 2022. Invoice Ninja LLC (https://invoiceninja.com)
  *
  * @license https://www.elastic.co/licensing/elastic-license
  */
@@ -20,7 +20,7 @@ class UploadRecurringQuoteRequest extends Request
      *
      * @return bool
      */
-    public function authorize() : bool
+    public function authorize(): bool
     {
         return auth()->user()->can('edit', $this->recurring_quote);
     }
@@ -40,7 +40,7 @@ class UploadRecurringQuoteRequest extends Request
         } elseif ($this->file('file')) {
             $rules['file'] = $this->file_validation;
         }
-        
+
         return $rules;
     }
 }

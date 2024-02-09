@@ -25,15 +25,17 @@ use Illuminate\Database\Eloquent\ModelNotFoundException as ModelNotFoundExceptio
  * @method static \Illuminate\Database\Eloquent\Builder|StaticModel newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder|StaticModel newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder|StaticModel query()
- * @method static \Illuminate\Database\Eloquent\Builder|StaticModel find()
- * @method static \Illuminate\Database\Eloquent\Builder|StaticModel findOrFail()
+ * @method static \Illuminate\Database\Eloquent\Builder|StaticModel find($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|StaticModel with($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|StaticModel withTrashed($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|StaticModel findOrFail($value)
  * @mixin \Eloquent
  */
 class StaticModel extends Model
 {
     use MakesHash;
     use Excludable;
-    
+
     protected $casts = [
         'updated_at' => 'timestamp',
         'created_at' => 'timestamp',

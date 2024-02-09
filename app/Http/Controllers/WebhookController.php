@@ -298,7 +298,10 @@ class WebhookController extends BaseController
      */
     public function create(CreateWebhookRequest $request)
     {
-        $webhook = WebhookFactory::create(auth()->user()->company()->id, auth()->user()->id);
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        $webhook = WebhookFactory::create($user->company()->id, $user->id);
         $webhook->fill($request->all());
         $webhook->save();
 
@@ -352,8 +355,11 @@ class WebhookController extends BaseController
             return response()->json('Invalid event', 400);
         }
 
-        $webhook = new Webhook;
-        $webhook->company_id = auth()->user()->company()->id;
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        $webhook = new Webhook();
+        $webhook->company_id = $user->company()->id;
         $webhook->user_id = auth()->user()->id;
         $webhook->event_id = $event_id;
         $webhook->target_url = $target_url;
@@ -483,7 +489,10 @@ class WebhookController extends BaseController
         $webhooks = Webhook::withTrashed()->find($this->transformKeys($ids));
 
         $webhooks->each(function ($webhook, $key) use ($action) {
-            if (auth()->user()->can('edit', $webhook)) {
+            /** @var \App\Models\User $user */
+            $user = auth()->user();
+
+            if ($user->can('edit', $webhook)) {
                 $this->base_repo->{$action}($webhook);
             }
         });
@@ -493,24 +502,29 @@ class WebhookController extends BaseController
 
     public function retry(RetryWebhookRequest $request, Webhook $webhook)
     {
+        $includes = '';
+
         match ($request->entity) {
-            'invoice' => $includes ='client',
-            'payment' => $includes ='invoices,client',
-            'project' => $includes ='client',
-            'purchase_order' => $includes ='vendor',
-            'quote' => $includes ='client',
+            'invoice' => $includes = 'client',
+            'payment' => $includes = 'invoices,client',
+            'project' => $includes = 'client',
+            'purchase_order' => $includes = 'vendor',
+            'quote' => $includes = 'client',
             default => $includes = ''
         };
 
         $class = 'App\Models\\'.ucfirst(Str::camel($request->entity));
 
-        $entity = $class::withTrashed()->where('id', $this->decodePrimaryKey($request->entity_id))->company()->first();
+        $entity = $class::query()->withTrashed()->where('id', $this->decodePrimaryKey($request->entity_id))->company()->first();
 
         if (!$entity) {
             return response()->json(['message' => ctrans('texts.record_not_found')], 400);
         }
 
-        WebhookSingle::dispatchSync($webhook->id, $entity, auth()->user()->company()->db, $includes);
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        WebhookSingle::dispatchSync($webhook->id, $entity, $user->company()->db, $includes);
 
         return $this->itemResponse($webhook);
     }

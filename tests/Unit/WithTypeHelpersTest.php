@@ -15,10 +15,12 @@ namespace Tests\Unit;
 use App\Models\Account;
 use App\Models\Company;
 use App\Models\Document;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Tests\TestCase;
 
 class WithTypeHelpersTest extends TestCase
 {
+    
     public function testIsImageHelper(): void
     {
         $account = Account::factory()->create();

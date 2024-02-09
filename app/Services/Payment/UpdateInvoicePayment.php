@@ -38,8 +38,8 @@ class UpdateInvoicePayment
     {
         $paid_invoices = $this->payment_hash->invoices();
 
-        $invoices = Invoice::whereIn('id', $this->transformKeys(array_column($paid_invoices, 'invoice_id')))->withTrashed()->get();
-        
+        $invoices = Invoice::query()->whereIn('id', $this->transformKeys(array_column($paid_invoices, 'invoice_id')))->withTrashed()->get();
+
         $client = $this->payment->client;
 
         if ($client->trashed()) {
@@ -55,6 +55,8 @@ class UpdateInvoicePayment
                 $invoice->restore();
             }
 
+            // $has_partial = $invoice->hasPartial();
+
             if ($invoice->id == $this->payment_hash->fee_invoice_id) {
                 $paid_amount = $paid_invoice->amount + $this->payment_hash->fee_total;
             } else {
@@ -63,12 +65,14 @@ class UpdateInvoicePayment
 
             $client->service()->updatePaidToDate($paid_amount); //always use the payment->amount
 
+            $has_partial = $invoice->hasPartial();
+
             /* Need to determine here is we have an OVER payment - if YES only apply the max invoice amount */
             if ($paid_amount > $invoice->partial && $paid_amount > $invoice->balance) {
                 $paid_amount = $invoice->balance;
             }
 
-            $client->service()->updateBalance($paid_amount*-1); //only ever use the amount applied to the invoice
+            $client->service()->updateBalance($paid_amount * -1); //only ever use the amount applied to the invoice
 
             /*Improve performance here - 26-01-2022 - also change the order of events for invoice first*/
             //caution what if we amount paid was less than partial - we wipe it!
@@ -76,13 +80,17 @@ class UpdateInvoicePayment
             $invoice->paid_to_date += $paid_amount;
             $invoice->save();
 
-            $invoice =  $invoice->service()
-                                ->clearPartial()
-                                ->updateStatus()
-                                ->touchPdf()
-                                ->workFlow()
-                                ->save();
-            
+            $invoice_service = $invoice->service()
+                               ->clearPartial()
+                               ->updateStatus()
+                               ->workFlow();
+
+            if ($has_partial) {
+                $invoice_service->checkReminderStatus();
+            }
+
+            $invoice = $invoice_service->save();
+
             if ($invoice->is_proforma) {
                 //keep proforma's hidden
                 if (property_exists($this->payment_hash->data, 'pre_payment') && $this->payment_hash->data->pre_payment == "1") {
@@ -110,7 +118,7 @@ class UpdateInvoicePayment
                         $recurring_invoice->balance = $invoice->amount;
                         $recurring_invoice->status_id = RecurringInvoice::STATUS_ACTIVE;
                         $recurring_invoice->is_proforma = true;
-                        
+
                         $recurring_invoice->saveQuietly();
                         $recurring_invoice->next_send_date =  $recurring_invoice->nextSendDate();
                         $recurring_invoice->next_send_date_client = $recurring_invoice->nextSendDateClient();
@@ -120,14 +128,14 @@ class UpdateInvoicePayment
                     return;
                 }
 
-                
+
 
                 if (strlen($invoice->number) > 1 && str_starts_with($invoice->number, "####")) {
                     $invoice->number = '';
                 }
 
                 $invoice->is_proforma = false;
-                
+
                 $invoice->service()
                         ->applyNumber()
                         ->save();
@@ -149,7 +157,7 @@ class UpdateInvoicePayment
 
             $this->payment->applied += $paid_amount;
         });
-        
+
         /* Remove the event updater from within the loop to prevent race conditions */
 
         $this->payment->saveQuietly();

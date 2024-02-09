@@ -12,6 +12,7 @@
 namespace App\Jobs\Cron;
 
 use App\Models\Invoice;
+use App\Models\Webhook;
 use App\Libraries\MultiDB;
 use Illuminate\Bus\Queueable;
 use App\Jobs\Entity\EmailEntity;
@@ -22,7 +23,10 @@ use Illuminate\Foundation\Bus\Dispatchable;
 
 class AutoBill implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     public $tries = 1;
 
@@ -40,7 +44,7 @@ class AutoBill implements ShouldQueue
      *
      * @return void
      */
-    public function handle() : void
+    public function handle(): void
     {
         set_time_limit(0);
 
@@ -49,10 +53,10 @@ class AutoBill implements ShouldQueue
         }
 
         $invoice = false;
-        
+
         try {
             nlog("autobill {$this->invoice_id}");
-            
+
             $invoice = Invoice::withTrashed()->find($this->invoice_id);
 
             $invoice->service()->autoBill();
@@ -60,8 +64,7 @@ class AutoBill implements ShouldQueue
         } catch (\Exception $e) {
             nlog("Failed to capture payment for {$this->invoice_id} ->".$e->getMessage());
 
-            if($this->send_email_on_failure && $invoice)
-            {
+            if($this->send_email_on_failure && $invoice) {
 
                 $invoice->invitations->each(function ($invitation) use ($invoice) {
                     if ($invitation->contact && ! $invitation->contact->trashed() && strlen($invitation->contact->email) >= 1 && $invoice->client->getSetting('auto_email_invoice')) {
@@ -69,7 +72,7 @@ class AutoBill implements ShouldQueue
                             EmailEntity::dispatch($invitation, $invoice->company)->delay(rand(1, 2));
 
                             $invoice->entityEmailEvent($invitation, 'invoice', 'email_template_invoice');
-                                
+
                         } catch (\Exception $e) {
                             nlog($e->getMessage());
                         }
@@ -77,6 +80,8 @@ class AutoBill implements ShouldQueue
                         nlog("Firing email for invoice {$invoice->number}");
                     }
                 });
+
+                $invoice->sendEvent(Webhook::EVENT_SENT_INVOICE, "client");
 
             }
 

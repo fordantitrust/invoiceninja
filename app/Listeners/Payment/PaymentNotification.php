@@ -11,6 +11,7 @@
 
 namespace App\Listeners\Payment;
 
+use App\DataMapper\Analytics\RevenueTrack;
 use App\Jobs\Mail\NinjaMailer;
 use App\Jobs\Mail\NinjaMailerJob;
 use App\Jobs\Mail\NinjaMailerObject;
@@ -19,6 +20,7 @@ use App\Mail\Admin\EntityPaidObject;
 use App\Utils\Ninja;
 use App\Utils\Traits\Notifications\UserNotifies;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Turbo124\Beacon\Facades\LightLogs;
 
 class PaymentNotification implements ShouldQueue
 {
@@ -57,7 +59,7 @@ class PaymentNotification implements ShouldQueue
         }
 
         /* Manual Payment Notifications */
-        if($payment->is_manual){
+        if($payment->is_manual) {
 
             foreach ($payment->company->company_users as $company_user) {
                 $user = $company_user->user;
@@ -75,7 +77,7 @@ class PaymentNotification implements ShouldQueue
                 if (($key = array_search('mail', $methods)) !== false) {
                     unset($methods[$key]);
 
-                    $nmo = new NinjaMailerObject;
+                    $nmo = new NinjaMailerObject();
                     $nmo->mailable = new NinjaMailer((new EntityPaidObject($payment, $company_user->portalType()))->build());
                     $nmo->company = $event->company;
                     $nmo->settings = $event->company->settings;
@@ -107,7 +109,7 @@ class PaymentNotification implements ShouldQueue
             if (($key = array_search('mail', $methods)) !== false) {
                 unset($methods[$key]);
 
-                $nmo = new NinjaMailerObject;
+                $nmo = new NinjaMailerObject();
                 $nmo->mailable = new NinjaMailer((new EntityPaidObject($payment, $company_user->portalType()))->build());
                 $nmo->company = $event->company;
                 $nmo->settings = $event->company->settings;
@@ -158,13 +160,22 @@ class PaymentNotification implements ShouldQueue
 
         $url = $base."&t=item&in={$item}&ip={$amount}&iq=1";
         $this->sendAnalytics($url);
+
+        $email = $client->present()->email();
+        $account_key = $client->custom_value2 ?? 'unknown';
+        $product = $item;
+        $gateway_reference = $client->gateway_tokens()->count() >= 1 ? ($client->gateway_tokens()->first()->gateway_customer_reference ?? '') : '';
+
+        // LightLogs::create(new RevenueTrack($email, $account_key, 1, $amount, $product, $gateway_reference, $entity_number))
+        //          ->batch();
+
     }
 
     /**
      * @param string $url
      */
     private function sendAnalytics($url)
-    {   
+    {
         $data = mb_convert_encoding($url, 'UTF-8');
         // $data = utf8_encode($data);
         $curl = curl_init();

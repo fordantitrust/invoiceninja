@@ -48,7 +48,7 @@ class VendorController extends BaseController
     protected $entity_transformer = VendorTransformer::class;
 
     /**
-     * @var Vendorepository
+     * @var VendorRepository
      */
     protected $vendor_repo;
 
@@ -320,7 +320,11 @@ class VendorController extends BaseController
      */
     public function create(CreateVendorRequest $request)
     {
-        $vendor = VendorFactory::create(auth()->user()->company()->id, auth()->user()->id);
+
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        $vendor = VendorFactory::create($user->company()->id, auth()->user()->id);
 
         return $this->itemResponse($vendor);
     }
@@ -365,7 +369,11 @@ class VendorController extends BaseController
      */
     public function store(StoreVendorRequest $request)
     {
-        $vendor = $this->vendor_repo->save($request->all(), VendorFactory::create(auth()->user()->company()->id, auth()->user()->id));
+
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        $vendor = $this->vendor_repo->save($request->all(), VendorFactory::create($user->company()->id, auth()->user()->id));
 
         $vendor->load('contacts', 'primary_contact');
 
@@ -491,9 +499,12 @@ class VendorController extends BaseController
 
         $ids = request()->input('ids');
         $vendors = Vendor::withTrashed()->find($this->transformKeys($ids));
+        
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
 
-        $vendors->each(function ($vendor, $key) use ($action) {
-            if (auth()->user()->can('edit', $vendor)) {
+        $vendors->each(function ($vendor, $key) use ($action, $user) {
+            if ($user->can('edit', $vendor)) {
                 $this->vendor_repo->{$action}($vendor);
             }
         });
@@ -568,7 +579,7 @@ class VendorController extends BaseController
         }
 
         if ($request->has('documents')) {
-            $this->saveDocuments($request->file('documents'), $vendor);
+            $this->saveDocuments($request->file('documents'), $vendor, $request->input('is_public', true));
         }
 
         return $this->itemResponse($vendor->fresh());

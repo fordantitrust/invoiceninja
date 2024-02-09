@@ -15,9 +15,9 @@ use App\Models\User;
 
 class UserFactory
 {
-    public static function create(int $account_id) :User
+    public static function create(int $account_id): User
     {
-        $user = new User;
+        $user = new User();
 
         $user->account_id = $account_id;
         $user->first_name = '';
@@ -28,6 +28,7 @@ class UserFactory
         $user->failed_logins = 0;
         $user->signature = '';
         $user->theme_id = 0;
+        $user->user_logged_in_notification = true;
 
         return $user;
     }

@@ -11,16 +11,16 @@
 
 namespace App\Services\Report;
 
-use App\Utils\Ninja;
-use App\Utils\Number;
+use App\Export\CSV\BaseExport;
+use App\Libraries\MultiDB;
 use App\Models\Client;
-use League\Csv\Writer;
 use App\Models\Company;
 use App\Models\Invoice;
-use App\Libraries\MultiDB;
-use App\Export\CSV\BaseExport;
+use App\Utils\Ninja;
+use App\Utils\Number;
 use App\Utils\Traits\MakesDates;
 use Illuminate\Support\Facades\App;
+use League\Csv\Writer;
 
 class ClientSalesReport extends BaseExport
 {
@@ -31,7 +31,7 @@ class ClientSalesReport extends BaseExport
     //Amount with Tax
 
     public Writer $csv;
-    
+
     public string $date_key = 'created_at';
 
     public array $report_keys = [
@@ -68,7 +68,7 @@ class ClientSalesReport extends BaseExport
         $t->replace(Ninja::transformTranslations($this->company->settings));
 
         $this->csv = Writer::createFromString();
-        
+
         $this->csv->insertOne([]);
         $this->csv->insertOne([]);
         $this->csv->insertOne([]);
@@ -88,25 +88,25 @@ class ClientSalesReport extends BaseExport
             ->orderBy('balance', 'desc')
             ->cursor()
             ->each(function ($client) {
-                
+
                 $this->csv->insertOne($this->buildRow($client));
-                
+
             });
 
         return $this->csv->toString();
-        
+
     }
 
     private function buildRow(Client $client): array
     {
-        $query = Invoice::where('client_id', $client->id)
+        $query = Invoice::query()->where('client_id', $client->id)
                                 ->whereIn('status_id', [Invoice::STATUS_SENT, Invoice::STATUS_PARTIAL, Invoice::STATUS_PAID]);
-    
+
         $query = $this->addDateRange($query);
 
         $amount = $query->sum('amount');
         $balance = $query->sum('balance');
-        $paid = $amount-$balance;
+        $paid = $amount - $balance;
 
         return [
             $client->present()->name(),
@@ -116,12 +116,12 @@ class ClientSalesReport extends BaseExport
             Number::formatMoney($amount, $client),
             Number::formatMoney($balance, $client),
             Number::formatMoney($query->sum('total_taxes'), $client),
-            Number::formatMoney($amount-$balance, $client),
+            Number::formatMoney($amount - $balance, $client),
 
         ];
     }
-    
-    public function buildHeader() :array
+
+    public function buildHeader(): array
     {
         $header = [];
 

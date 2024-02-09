@@ -11,11 +11,10 @@
 
 namespace App\Jobs\Cron;
 
-use App\Models\Payment;
-use App\Models\Project;
 use App\Libraries\MultiDB;
-use Illuminate\Support\Facades\Auth;
+use App\Models\Project;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Support\Facades\Auth;
 
 class UpdateCalculatedFields
 {
@@ -35,36 +34,40 @@ class UpdateCalculatedFields
      *
      * @return void
      */
-    public function handle() : void
+    public function handle(): void
     {
         nlog("Updating calculated fields");
-        
+
         Auth::logout();
 
         if (! config('ninja.db.multi_db_enabled')) {
 
-            Project::with('tasks')->where('updated_at', '>', now()->subHours(2))
+            Project::query()->with('tasks')->whereHas('tasks', function ($query) {
+                $query->where('updated_at', '>', now()->subHours(2));
+            })
                 ->cursor()
                 ->each(function ($project) {
 
                     $project->current_hours = $this->calculateDuration($project);
                     $project->save();
-            });
+                });
 
 
-            
+
         } else {
             //multiDB environment, need to
             foreach (MultiDB::$dbs as $db) {
                 MultiDB::setDB($db);
 
 
-            Project::with('tasks')->where('updated_at', '>', now()->subHours(2))
-                ->cursor()
-                ->each(function ($project) {
-                    $project->current_hours = $this->calculateDuration($project);
-                    $project->save();
-                });
+                Project::query()->with('tasks')->whereHas('tasks', function ($query) {
+                    $query->where('updated_at', '>', now()->subHours(2));
+                })
+                    ->cursor()
+                    ->each(function ($project) {
+                        $project->current_hours = $this->calculateDuration($project);
+                        $project->save();
+                    });
 
             }
         }
@@ -75,24 +78,22 @@ class UpdateCalculatedFields
         $duration = 0;
 
         $project->tasks->each(function ($task) use (&$duration) {
-            
-        
-            foreach(json_decode($task->time_log) as $log){
 
-                $start_time = $log[0];
-                $end_time = $log[1] == 0 ? time() : $log[1];
+            if(is_iterable(json_decode($task->time_log))) {
 
-                $duration += $end_time - $start_time;
+                foreach(json_decode($task->time_log) as $log) {
 
+                    $start_time = $log[0];
+                    $end_time = $log[1] == 0 ? time() : $log[1];
+
+                    $duration += $end_time - $start_time;
+
+                }
             }
-                    
+
         });
 
-        return round(($duration/60/60), 0);
+        return round(($duration / 60 / 60), 0);
 
     }
 }
-
-
-
-

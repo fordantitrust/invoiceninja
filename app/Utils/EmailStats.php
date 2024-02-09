@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Cache;
  */
 class EmailStats
 {
-    const EMAIL = 'email_';
+    public const EMAIL = 'email_';
 
     /**
      * Increments the counter for emails sent
@@ -57,12 +57,13 @@ class EmailStats
      * Iterates through a list of companies
      * and flushes the email sent data.
      *
-     * @param  Collection $companies The company key
+     * @param  \Illuminate\Database\Eloquent\Collection<\App\Models\Company> $companies The company key
      * @return void
      */
     public static function clearCompanies($companies)
     {
         $companies->each(function ($company) {
+            /** @var \App\Models\Company $company */
             self::clear($company->company_key);
         });
     }

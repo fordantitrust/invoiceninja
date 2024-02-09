@@ -12,7 +12,6 @@
 namespace App\Notifications\Admin;
 
 use App\Utils\Number;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Messages\SlackMessage;
 use Illuminate\Notifications\Notification;
 
@@ -67,7 +66,7 @@ class EntitySentNotification extends Notification
      * Get the mail representation of the notification.
      *
      * @param  mixed  $notifiable
-     * @return MailMessage
+     *
      */
     public function toMail($notifiable)
     {
@@ -89,7 +88,7 @@ class EntitySentNotification extends Notification
         $logo = $this->invitation->company->present()->logo();
         $amount = Number::formatMoney($this->entity->amount, $this->entity->client);
 
-        return (new SlackMessage)
+        return (new SlackMessage())
                     ->from(ctrans('texts.notification_bot'))
                     ->success()
                     ->image('https://app.invoiceninja.com/favicon-v2.png')

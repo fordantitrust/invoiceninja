@@ -12,21 +12,22 @@
 
 namespace App\Http\Controllers\ClientPortal;
 
-use App\Events\Misc\InvitationWasViewed;
+use App\Utils\Ninja;
+use App\Models\Quote;
+use App\Utils\HtmlEngine;
+use Illuminate\View\View;
+use Illuminate\Http\Request;
+use App\Models\QuoteInvitation;
+use App\Utils\Traits\MakesHash;
 use App\Events\Quote\QuoteWasViewed;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\ClientPortal\Quotes\ProcessQuotesInBulkRequest;
+use App\Jobs\Invoice\InjectSignature;
+use Illuminate\Contracts\View\Factory;
+use App\Events\Misc\InvitationWasViewed;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use App\Http\Requests\ClientPortal\Quotes\ShowQuoteRequest;
 use App\Http\Requests\ClientPortal\Quotes\ShowQuotesRequest;
-use App\Jobs\Invoice\InjectSignature;
-use App\Models\Quote;
-use App\Utils\Ninja;
-use App\Utils\Traits\MakesHash;
-use Illuminate\Contracts\View\Factory;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\View\View;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use App\Http\Requests\ClientPortal\Quotes\ProcessQuotesInBulkRequest;
 
 class QuoteController extends Controller
 {
@@ -53,12 +54,14 @@ class QuoteController extends Controller
     {
         /* If the quote is expired, convert the status here */
 
-        $invitation = $quote->invitations()->where('client_contact_id', auth()->user()->id)->first();
+        $invitation = $quote->invitations()->where('client_contact_id', auth()->guard('contact')->user()->id)->first();
+        $variables = ($invitation && auth()->guard('contact')->user()->client->getSetting('show_accept_quote_terms')) ? (new HtmlEngine($invitation))->generateLabelsAndValues() : false;
 
         $data = [
             'quote' => $quote,
             'key' => $invitation ? $invitation->key : false,
-            'invitation' => $invitation
+            'invitation' => $invitation,
+            'variables' => $variables,
         ];
 
         if ($invitation && auth()->guard('contact') && ! request()->has('silent') && ! $invitation->viewed_date) {
@@ -78,13 +81,12 @@ class QuoteController extends Controller
     public function bulk(ProcessQuotesInBulkRequest $request)
     {
         $transformed_ids = $this->transformKeys($request->quotes);
-        nlog(request()->all());
 
         if ($request->action == 'download') {
             return $this->downloadQuotes((array) $transformed_ids);
         }
 
-        if ($request->action = 'approve') {
+        if ($request->action == 'approve') {
             return $this->approve((array) $transformed_ids, $request->has('process'));
         }
 
@@ -93,8 +95,12 @@ class QuoteController extends Controller
 
     public function downloadQuotes($ids)
     {
-        $data['quotes'] = Quote::whereIn('id', $ids)
-                            ->whereClientId(auth()->user()->client->id)
+        /** @var \App\Models\ClientContact $client_contact **/
+        $client_contact = auth()->user();
+
+        $data['quotes'] = Quote::query()
+                            ->whereIn('id', $ids)
+                            ->where('client_id', $client_contact->client_id)
                             ->withTrashed()
                             ->get();
 
@@ -114,36 +120,42 @@ class QuoteController extends Controller
 
     protected function downloadQuotePdf(array $ids)
     {
-        $quotes = Quote::whereIn('id', $ids)
-            ->whereClientId(auth()->user()->client->id)
+
+        /** @var \App\Models\ClientContact $client_contact **/
+        $client_contact = auth()->user();
+
+        $quote_invitations = QuoteInvitation::query()
+            ->with('quote', 'company')
+            ->whereIn('quote_id', $ids)
+            ->where('client_contact_id', $client_contact->id)
             ->withTrashed()
             ->get();
 
-        if (! $quotes || $quotes->count() == 0) {
+        if (! $quote_invitations || $quote_invitations->count() == 0) {
             return redirect()
                 ->route('client.quotes.index')
                 ->with('message', ctrans('texts.no_quotes_available_for_download'));
         }
 
-        if ($quotes->count() == 1) {
-            $file = $quotes->first()->service()->getQuotePdf();
-            // return response()->download($file, basename($file), ['Cache-Control:' => 'no-cache'])->deleteFileAfterSend(true);
+        if ($quote_invitations->count() == 1) {
+            $invitation = $quote_invitations->first();
+            $file = (new \App\Jobs\Entity\CreateRawPdf($invitation))->handle();
             return response()->streamDownload(function () use ($file) {
-                echo Storage::get($file);
-            }, basename($file), ['Content-Type' => 'application/pdf']);
+                echo $file;
+            }, $invitation->quote->numberFormatter().".pdf", ['Content-Type' => 'application/pdf']);
         }
 
-        return $this->buildZip($quotes);
+        return $this->buildZip($quote_invitations);
     }
 
-    private function buildZip($quotes)
+    private function buildZip($quote_invitations)
     {
         // create new archive
         $zipFile = new \PhpZip\ZipFile();
         try {
-            foreach ($quotes as $quote) {
-                //add it to the zip
-                $zipFile->addFromString(basename($quote->pdf_file_path()), file_get_contents($quote->pdf_file_path(null, 'url', true)));
+            foreach ($quote_invitations as $invitation) {
+                $file = (new \App\Jobs\Entity\CreateRawPdf($invitation))->handle();
+                $zipFile->addFromString($invitation->quote->numberFormatter() . '.pdf', $file);
             }
 
             $filename = date('Y-m-d').'_'.str_replace(' ', '_', trans('texts.quotes')).'.zip';
@@ -154,7 +166,6 @@ class QuoteController extends Controller
 
             return response()->download($filepath, $filename)->deleteFileAfterSend(true);
         } catch (\PhpZip\Exception\ZipException $e) {
-            // handle exception
         } finally {
             $zipFile->close();
         }
@@ -162,7 +173,8 @@ class QuoteController extends Controller
 
     protected function approve(array $ids, $process = false)
     {
-        $quotes = Quote::whereIn('id', $ids)
+        $quotes = Quote::query()
+            ->whereIn('id', $ids)
             ->where('client_id', auth()->guard('contact')->user()->client->id)
             ->where('company_id', auth()->guard('contact')->user()->client->company_id)
             ->whereIn('status_id', [Quote::STATUS_DRAFT, Quote::STATUS_SENT])
@@ -183,16 +195,16 @@ class QuoteController extends Controller
                 }
 
                 $quote->service()->approve(auth()->user())->save();
-                
+
                 if (request()->has('signature') && ! is_null(request()->signature) && ! empty(request()->signature)) {
-                    InjectSignature::dispatch($quote, request()->signature);
+                    InjectSignature::dispatch($quote, auth()->guard('contact')->user()->id, request()->signature, request()->getClientIp());
                 }
             }
 
-            if (count($ids) == 1) {
+            if ($quotes->count() == 1) {
                 //forward client to the invoice if it exists
-                if ($quote->invoice()->exists()) {
-                    return redirect()->route('client.invoice.show', $quote->invoice->hashed_id);
+                if ($quotes->first()->invoice()->exists()) {
+                    return redirect()->route('client.invoice.show', $quotes->first()->invoice->hashed_id);
                 }
 
                 return redirect()->route('client.quote.show', $quotes->first()->hashed_id);
@@ -203,8 +215,18 @@ class QuoteController extends Controller
                 ->withSuccess('Quote(s) approved successfully.');
         }
 
+        
+        $variables = false;
+
+        if($invitation = $quotes->first()->invitations()->first() ?? false) {
+            $variables = (new HtmlEngine($invitation))->generateLabelsAndValues();
+        }
+
+        $variables = ($invitation && auth()->guard('contact')->user()->client->getSetting('show_accept_quote_terms')) ? (new HtmlEngine($invitation))->generateLabelsAndValues() : false;
+
         return $this->render('quotes.approve', [
             'quotes' => $quotes,
+            'variables' => $variables,
         ]);
     }
 }

@@ -26,7 +26,8 @@ class ApplePayDomainController extends Controller
         /* Self Host */
 
         if (Ninja::isSelfHost()) {
-            $cgs = CompanyGateway::whereIn('gateway_key', $this->stripe_keys)
+            $cgs = CompanyGateway::query()
+                                 ->whereIn('gateway_key', $this->stripe_keys)
                                  ->where('is_deleted', false)
                                  ->get();
 
@@ -43,7 +44,7 @@ class ApplePayDomainController extends Controller
 
         $domain_name = $request->getHost();
 
-        if (strpos($domain_name, 'invoicing.co') !== false) {
+        if (strpos($domain_name, config('ninja.app_domain')) !== false) {
             $subdomain = explode('.', $domain_name)[0];
 
             $query = [

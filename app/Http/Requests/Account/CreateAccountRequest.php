@@ -37,18 +37,23 @@ class CreateAccountRequest extends Request
     public function rules()
     {
         if (Ninja::isHosted()) {
-            $email_rules = ['bail', 'required', 'email:rfc,dns', new NewUniqueUserRule, new BlackListRule, new EmailBlackListRule];
+            $email_rules = ['bail', 'required', 'email:rfc,dns', new NewUniqueUserRule(), new BlackListRule(), new EmailBlackListRule()];
         } else {
-            $email_rules = ['bail', 'required', 'email:rfc,dns', new NewUniqueUserRule];
+            $email_rules = ['bail', 'required', 'email:rfc,dns', new NewUniqueUserRule()];
         }
 
         return [
             'first_name'        => 'string|max:100',
             'last_name'         =>  'string:max:100',
-            'password'          => 'required|string|min:6|max:1000',
+            'password'          => 'required|string|min:6|max:100',
             'email'             =>  $email_rules,
             'privacy_policy'    => 'required|boolean',
             'terms_of_service'  => 'required|boolean',
+            'utm_source'        => 'sometimes|nullable|string',
+            'utm_medium'        => 'sometimes|nullable|string',
+            'utm_campaign'      => 'sometimes|nullable|string',
+            'utm_term'          => 'sometimes|nullable|string',
+            'utm_content'       => 'sometimes|nullable|string',
         ];
     }
 

@@ -61,12 +61,14 @@ class MobileLocalization extends Command
 
     private function laravelResources()
     {
-        $resources = $this->getResources();
+        $resources = (array)$this->getResources();
 
-        foreach ($resources as $key => $val) {
-            $transKey = "texts.{$key}";
-            if (trans($transKey) == $transKey) {
-                echo "'$key' => '$val',\n";
+        if(is_iterable($resources)) {
+            foreach ($resources as $key => $val) {
+                $transKey = "texts.{$key}";
+                if (trans($transKey) == $transKey) {
+                    echo "'$key' => '$val',\n";
+                }
             }
         }
     }
@@ -92,17 +94,6 @@ class MobileLocalization extends Command
                 $text = str_replace(['<b>', '</b>'], '', $text);
                 $text = str_replace(['<i>', '</i>'], '', $text);
                 $text = str_replace(['<strong>', '</strong>'], '', $text);
-
-//replace the three lines above with this
-// if($language->locale == 'ar') {
-//     $text = str_replace('\n', " ", $text);
-// }
-
-// $text = str_replace(['<strong>', '</strong>','<i>', '</i>','<b>', '</b>'], '', $text);
-// $text = str_replace('"', "'", $text);
-
-
-
 
                 echo "'$key': '$text',\n";
             }

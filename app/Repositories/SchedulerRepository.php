@@ -30,9 +30,8 @@ class SchedulerRepository extends BaseRepository
 
         $scheduler->save();
 
-        /** 18-5-2023 set client specific send times. */
-        $scheduler->calculateNextRun();
-        
+        $scheduler->adjustOffset();
+
         return $scheduler->fresh();
     }
 }

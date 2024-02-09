@@ -20,16 +20,16 @@ class BulkBankTransactionRequest extends Request
      *
      * @return bool
      */
-    public function authorize() : bool
+    public function authorize(): bool
     {
-        return auth()->user()->isAdmin();
+        return true;
     }
 
-    public function rules()
+    public function rules(): array
     {
         return [
             'ids' => 'required|bail|array',
-            'action' => 'in:archive,restore,delete,convert_matched'
+            'action' => 'in:archive,restore,delete,convert_matched,unlink'
         ];
     }
 }

@@ -132,7 +132,11 @@ class ProductController extends BaseController
      */
     public function create(CreateProductRequest $request)
     {
-        $product = ProductFactory::create(auth()->user()->company()->id, auth()->user()->id);
+
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        $product = ProductFactory::create($user->company()->id, auth()->user()->id);
 
         return $this->itemResponse($product);
     }
@@ -177,7 +181,11 @@ class ProductController extends BaseController
      */
     public function store(StoreProductRequest $request)
     {
-        $product = $this->product_repo->save($request->all(), ProductFactory::create(auth()->user()->company()->id, auth()->user()->id));
+        
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        $product = $this->product_repo->save($request->all(), ProductFactory::create($user->company()->id, auth()->user()->id));
 
         return $this->itemResponse($product);
     }
@@ -408,7 +416,7 @@ class ProductController extends BaseController
     /**
      * Perform bulk actions on the list view.
      *
-     * @return Collection
+     * @return \Illuminate\Support\Collection
      *
      *
      * @OA\Post(
@@ -458,16 +466,17 @@ class ProductController extends BaseController
      */
     public function bulk(BulkProductRequest $request)
     {
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
         $action = $request->input('action');
 
         $ids = $request->input('ids');
 
         $products = Product::withTrashed()->whereIn('id', $ids);
 
-        nlog($products->count());
+        if($action == 'set_tax_id') {
 
-        if($action == 'set_tax_id'){
-            
             $tax_id = $request->input('tax_id');
 
             $products->update(['tax_id' => $tax_id]);
@@ -475,8 +484,8 @@ class ProductController extends BaseController
             return $this->listResponse(Product::withTrashed()->whereIn('id', $ids));
         }
 
-        $products->cursor()->each(function ($product, $key) use ($action) {
-            if (auth()->user()->can('edit', $product)) {
+        $products->cursor()->each(function ($product, $key) use ($action, $user) {
+            if ($user->can('edit', $product)) {
                 $this->product_repo->{$action}($product);
             }
         });
@@ -541,7 +550,7 @@ class ProductController extends BaseController
         }
 
         if ($request->has('documents')) {
-            $this->saveDocuments($request->file('documents'), $product);
+            $this->saveDocuments($request->file('documents'), $product, $request->input('is_public', true));
         }
 
         return $this->itemResponse($product->fresh());

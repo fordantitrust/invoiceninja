@@ -11,15 +11,15 @@
 
 namespace App\Services\Report;
 
-use App\Utils\Ninja;
+use App\Export\CSV\BaseExport;
+use App\Libraries\MultiDB;
 use App\Models\Client;
-use League\Csv\Writer;
 use App\Models\Company;
 use App\Models\Invoice;
-use App\Libraries\MultiDB;
-use App\Export\CSV\BaseExport;
+use App\Utils\Ninja;
 use App\Utils\Traits\MakesDates;
 use Illuminate\Support\Facades\App;
+use League\Csv\Writer;
 
 class ClientBalanceReport extends BaseExport
 {
@@ -29,7 +29,7 @@ class ClientBalanceReport extends BaseExport
     //Amount
     //Amount with Tax
     public Writer $csv;
-    
+
     public string $date_key = 'created_at';
 
     public array $report_keys = [
@@ -64,7 +64,7 @@ class ClientBalanceReport extends BaseExport
         $t->replace(Ninja::transformTranslations($this->company->settings));
 
         $this->csv = Writer::createFromString();
-        
+
         $this->csv->insertOne([]);
         $this->csv->insertOne([]);
         $this->csv->insertOne([]);
@@ -83,10 +83,10 @@ class ClientBalanceReport extends BaseExport
             ->where('is_deleted', 0)
             ->orderBy('balance', 'desc')
             ->cursor()
-            ->each(function ($client){
-                
+            ->each(function ($client) {
+
                 $this->csv->insertOne($this->buildRow($client));
-                
+
             });
 
         return $this->csv->toString();
@@ -97,17 +97,18 @@ class ClientBalanceReport extends BaseExport
     {
         $headers = [];
 
-        foreach($this->report_keys as $key)
+        foreach($this->report_keys as $key) {
             $headers[] = ctrans("texts.{$key}");
+        }
 
         return $headers;
 
     }
     private function buildRow(Client $client): array
     {
-        $query = Invoice::where('client_id', $client->id)
+        $query = Invoice::query()->where('client_id', $client->id)
                                 ->whereIn('status_id', [Invoice::STATUS_SENT, Invoice::STATUS_PARTIAL]);
-    
+
         $query = $this->addDateRange($query);
 
         return [

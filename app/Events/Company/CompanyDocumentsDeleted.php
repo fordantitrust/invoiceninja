@@ -14,13 +14,14 @@ namespace App\Events\Company;
 use App\Models\Company;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
 class CompanyDocumentsDeleted
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
+    use Dispatchable;
+    use InteractsWithSockets;
+    use SerializesModels;
 
     /**
      * @var Company
@@ -42,8 +43,8 @@ class CompanyDocumentsDeleted
      *
      * @return Channel|array
      */
-     public function broadcastOn()
-     {
-return [];
-     }
+    public function broadcastOn()
+    {
+        return [];
+    }
 }

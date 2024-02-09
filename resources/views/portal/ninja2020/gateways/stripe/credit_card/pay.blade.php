@@ -89,13 +89,18 @@
 
 @section('gateway_footer')
     <script>
-        Livewire.on('passed-required-fields-check', (event) => {
-            if (event.hasOwnProperty('client_postal_code')) {
-                document.querySelector('meta[name=client-postal-code]').content = event.client_postal_code;
-            }
+        document.addEventListener('livewire:init', () => {
+
+            Livewire.on('passed-required-fields-check', (event) => {
+                if (event.hasOwnProperty('client_postal_code')) {
+                    document.querySelector('meta[name=client-postal-code]').content = event.client_postal_code;
+                }
+            });
+
         });
+        
     </script>
 
     <script src="https://js.stripe.com/v3/"></script>
-    <script src="{{ asset('js/clients/payments/stripe-credit-card.js') }}"></script>
+    @vite('resources/js/clients/payments/stripe-credit-card.js')
 @endsection

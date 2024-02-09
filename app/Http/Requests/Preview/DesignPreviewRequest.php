@@ -30,24 +30,27 @@ class DesignPreviewRequest extends Request
      *
      * @return bool
      */
-    public function authorize() : bool
+    public function authorize(): bool
     {
-        return auth()->user()->can('create', Invoice::class) ||
-               auth()->user()->can('create', Quote::class) ||
-               auth()->user()->can('create', RecurringInvoice::class) ||
-               auth()->user()->can('create', Credit::class) ||
-               auth()->user()->can('create', PurchaseOrder::class);
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        return $user->can('create', Invoice::class) ||
+               $user->can('create', Quote::class) ||
+               $user->can('create', RecurringInvoice::class) ||
+               $user->can('create', Credit::class) ||
+               $user->can('create', PurchaseOrder::class);
     }
 
     public function rules()
     {
         $rules = [
-            'entity_type' => 'bail|required|in:invoice,quote,credit,purchase_order',
+            'entity_type' => 'bail|required|in:invoice,quote,credit,purchase_order,statement,payment_receipt,payment_refund,delivery_note',
             'settings_type' => 'bail|required|in:company,group,client',
             'settings' => 'sometimes',
             'group_id' => 'sometimes',
             'client_id' => 'sometimes',
-            'design' => 'bail|sometimes|array'
+            'design' => 'bail|sometimes|array',
         ];
 
         return $rules;

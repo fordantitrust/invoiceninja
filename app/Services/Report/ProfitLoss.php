@@ -11,19 +11,19 @@
 
 namespace App\Services\Report;
 
-use App\Utils\Ninja;
-use App\Utils\Number;
-use League\Csv\Writer;
+use App\Libraries\Currency\Conversion\CurrencyApi;
+use App\Libraries\MultiDB;
 use App\Models\Company;
+use App\Models\Currency;
 use App\Models\Expense;
 use App\Models\Invoice;
 use App\Models\Payment;
-use App\Models\Currency;
-use App\Libraries\MultiDB;
-use Illuminate\Support\Str;
+use App\Utils\Ninja;
+use App\Utils\Number;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\App;
-use App\Libraries\Currency\Conversion\CurrencyApi;
+use Illuminate\Support\Str;
+use League\Csv\Writer;
 
 class ProfitLoss
 {
@@ -107,7 +107,7 @@ class ProfitLoss
         if ($this->is_income_billed) { //get invoiced amounts
             $this->filterIncome();
         } else {
-            //$this->filterPaymentIncome();
+
             $this->filterInvoicePaymentIncome();
         }
 
@@ -116,27 +116,27 @@ class ProfitLoss
         return $this;
     }
 
-    public function getIncome() :float
+    public function getIncome(): float
     {
         return round($this->income, 2);
     }
 
-    public function getIncomeMap() :array
+    public function getIncomeMap(): array
     {
         return $this->income_map;
     }
 
-    public function getIncomeTaxes() :float
+    public function getIncomeTaxes(): float
     {
         return round($this->income_taxes, 2);
     }
 
-    public function getExpenses() :array
+    public function getExpenses(): array
     {
         return $this->expenses;
     }
 
-    public function getExpenseBreakDown() :array
+    public function getExpenseBreakDown(): array
     {
         ksort($this->expense_break_down);
 
@@ -178,21 +178,10 @@ class ProfitLoss
             $this->credit_taxes += $map->tax_amount_credit_converted;
         }
 
-        // $invoices = $this->invoicePaymentIncome();
-
-        // $this->income = 0;
-        // $this->income_taxes = 0;
-        // $this->income_map = $invoices;
-
-        // foreach($invoices as $invoice){
-        //     $this->income += $invoice->net_converted_amount;
-        //     $this->income_taxes += $invoice->net_converted_taxes;
-        // }
-
         return $this;
     }
 
-    private function getForeignIncome() :array
+    private function getForeignIncome(): array
     {
         return $this->foreign_income;
     }
@@ -232,7 +221,7 @@ class ProfitLoss
    */
     private function invoiceIncome()
     {
-        return \DB::select(\DB::raw("
+        return \DB::select("
             SELECT
             sum(invoices.amount) as amount,
             sum(invoices.total_taxes) as total_taxes,
@@ -250,7 +239,7 @@ class ProfitLoss
             AND invoices.is_deleted = 0
             AND (invoices.date BETWEEN :start_date AND :end_date)
             GROUP BY currency_id
-        "), ['company_currency' => $this->company->settings->currency_id, 'company_id' => $this->company->id, 'start_date' => $this->start_date, 'end_date' => $this->end_date]);
+        ", ['company_currency' => $this->company->settings->currency_id, 'company_id' => $this->company->id, 'start_date' => $this->start_date, 'end_date' => $this->end_date]);
     }
 
     /**
@@ -270,7 +259,7 @@ class ProfitLoss
     {
         $this->invoice_payment_map = [];
 
-        Payment::where('company_id', $this->company->id)
+        Payment::query()->where('company_id', $this->company->id)
                         ->whereIn('status_id', [1, 4, 5])
                         ->where('is_deleted', 0)
                         ->whereBetween('date', [$this->start_date, $this->end_date])
@@ -281,7 +270,7 @@ class ProfitLoss
                         ->cursor()
                         ->each(function ($payment) {
 
-                            $map = new \stdClass;
+                            $map = new \stdClass();
                             $amount_payment_paid = 0;
                             $amount_credit_paid = 0;
                             $amount_payment_paid_converted = 0;
@@ -293,24 +282,25 @@ class ProfitLoss
 
                             foreach ($payment->paymentables as $pivot) {
                                 if ($pivot->paymentable_type == 'invoices') {
-                                    $invoice = Invoice::withTrashed()->find($pivot->paymentable_id);
+                                    $invoice = Invoice::query()->withTrashed()->find($pivot->paymentable_id);
 
-                                    $amount_payment_paid += $pivot->amount - $pivot->refunded;
-                                    $amount_payment_paid_converted += $amount_payment_paid / ($payment->exchange_rate ?: 1);
-                                    
+                                    $pivot_diff = $pivot->amount - $pivot->refunded;
+                                    $amount_payment_paid += $pivot_diff;
+                                    $amount_payment_paid_converted += $pivot_diff / ($payment->exchange_rate ?: 1);
+
                                     if ($invoice->amount > 0) {
-                                        $tax_amount += ($amount_payment_paid / $invoice->amount) * $invoice->total_taxes;
-                                        $tax_amount_converted += (($amount_payment_paid / $invoice->amount) * $invoice->total_taxes) / $payment->exchange_rate;
+                                        $tax_amount += ($pivot_diff / $invoice->amount) * $invoice->total_taxes;
+                                        $tax_amount_converted += (($pivot_diff / $invoice->amount) * $invoice->total_taxes) / $payment->exchange_rate;
                                     }
 
                                 }
 
                                 if ($pivot->paymentable_type == 'credits') {
                                     $amount_credit_paid += $pivot->amount - $pivot->refunded;
-                                    $amount_credit_paid_converted += $amount_payment_paid / ($payment->exchange_rate ?: 1);
+                                    $amount_credit_paid_converted += $pivot_diff / ($payment->exchange_rate ?: 1);
 
-                                    $tax_amount_credit += ($amount_payment_paid / $invoice->amount) * $invoice->total_taxes;
-                                    $tax_amount_credit_converted += (($amount_payment_paid / $invoice->amount) * $invoice->total_taxes) / $payment->exchange_rate;
+                                    $tax_amount_credit += ($pivot_diff / $invoice->amount) * $invoice->total_taxes;
+                                    $tax_amount_credit_converted += (($pivot_diff / $invoice->amount) * $invoice->total_taxes) / $payment->exchange_rate;
                                 }
                             }
 
@@ -386,7 +376,7 @@ class ProfitLoss
         $csv->insertOne([ctrans('texts.total_taxes'), Number::formatMoney(array_sum(array_column($this->expense_break_down, 'tax')), $this->company)]);
 
         $csv->insertOne(['--------------------']);
-        $csv->insertOne([ctrans('texts.total_profit'), Number::formatMoney($this->income - array_sum(array_column($this->expense_break_down, 'total')), $this->company)]);
+        $csv->insertOne([ctrans('texts.total_profit'), Number::formatMoney($this->income - $this->income_taxes - array_sum(array_column($this->expense_break_down, 'total')) - array_sum(array_column($this->expense_break_down, 'tax')), $this->company)]);
 
         //net profit
 
@@ -402,28 +392,6 @@ class ProfitLoss
         return  $csv->toString();
     }
 
-    private function invoicePaymentIncome()
-    {
-        return \DB::select(\DB::raw("
-            SELECT
-            sum(invoices.amount - invoices.balance) as amount,
-            sum(invoices.total_taxes) * ((sum(invoices.amount - invoices.balance)/invoices.amount)) as total_taxes,
-            (sum(invoices.amount - invoices.balance) / IFNULL(invoices.exchange_rate, 1)) AS net_converted_amount,
-            (sum(invoices.total_taxes) * ((sum(invoices.amount - invoices.balance)/invoices.amount)) / IFNULL(invoices.exchange_rate, 1)) AS net_converted_taxes,
-            IFNULL(JSON_EXTRACT( settings, '$.currency_id' ), :company_currency) AS currency_id
-            FROM clients
-            JOIN invoices
-            on invoices.client_id = clients.id
-            WHERE invoices.status_id IN (3,4)
-            AND invoices.company_id = :company_id
-            AND invoices.amount > 0
-            AND clients.is_deleted = 0
-            AND invoices.is_deleted = 0
-            AND (invoices.date BETWEEN :start_date AND :end_date)
-            GROUP BY currency_id
-        "), ['company_currency' => $this->company->settings->currency_id, 'company_id' => $this->company->id, 'start_date' => $this->start_date, 'end_date' => $this->end_date]);
-    }
-
     /**
        +"payments": "12260.870000",
        +"payments_converted": "12260.870000000000",
@@ -431,7 +399,7 @@ class ProfitLoss
      */
     private function paymentIncome()
     {
-        return \DB::select(\DB::raw('
+        return \DB::select('
              SELECT 
              SUM(coalesce(payments.amount - payments.refunded,0)) as payments,
              SUM(coalesce(payments.amount - payments.refunded,0)) * IFNULL(payments.exchange_rate ,1) as payments_converted,
@@ -447,12 +415,12 @@ class ProfitLoss
              AND (payments.date BETWEEN :start_date AND :end_date)
              GROUP BY currency_id
              ORDER BY currency_id;
-        '), ['company_id' => $this->company->id, 'start_date' => $this->start_date, 'end_date' => $this->end_date]);
+        ', ['company_id' => $this->company->id, 'start_date' => $this->start_date, 'end_date' => $this->end_date]);
     }
 
     private function expenseData()
     {
-        $expenses = Expense::where('company_id', $this->company->id)
+        $expenses = Expense::query()->where('company_id', $this->company->id)
                            ->where('is_deleted', 0)
                            ->withTrashed()
                            ->whereBetween('date', [$this->start_date, $this->end_date])
@@ -461,7 +429,7 @@ class ProfitLoss
         $this->expenses = [];
 
         foreach ($expenses as $expense) {
-            $map = new \stdClass;
+            $map = new \stdClass();
 
             $amount = $expense->amount;
 
@@ -545,7 +513,7 @@ class ProfitLoss
 
     private function expenseCalcWithTax()
     {
-        return \DB::select(\DB::raw('
+        return \DB::select('
             SELECT sum(expenses.amount) as amount,
             IFNULL(expenses.currency_id, :company_currency) as currency_id
             FROM expenses
@@ -553,7 +521,7 @@ class ProfitLoss
             AND expenses.company_id = :company_id
             AND (expenses.date BETWEEN :start_date AND :end_date)
             GROUP BY currency_id
-        '), ['company_currency' => $this->company->settings->currency_id, 'company_id' => $this->company->id, 'start_date' => $this->start_date, 'end_date' => $this->end_date]);
+        ', ['company_currency' => $this->company->settings->currency_id, 'company_id' => $this->company->id, 'start_date' => $this->start_date, 'end_date' => $this->end_date]);
     }
 
     private function setBillingReportType()

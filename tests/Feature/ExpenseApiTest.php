@@ -13,13 +13,14 @@ namespace Tests\Feature;
 
 use App\Models\BankIntegration;
 use App\Models\BankTransaction;
-use Tests\TestCase;
 use App\Models\Expense;
-use Tests\MockAccountData;
+use App\Models\ExpenseCategory;
 use App\Utils\Traits\MakesHash;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Session;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\Session;
+use Tests\MockAccountData;
+use Tests\TestCase;
 
 /**
  * @test
@@ -31,6 +32,8 @@ class ExpenseApiTest extends TestCase
     use DatabaseTransactions;
     use MockAccountData;
 
+    public $faker;
+    
     protected function setUp() :void
     {
         parent::setUp();
@@ -229,6 +232,42 @@ class ExpenseApiTest extends TestCase
 
         $this->assertTrue($arr['data'][0]['is_deleted']);
     }
+
+    public function testExpenseBulkCategorize()
+    {
+
+
+        $e = Expense::factory()->create([
+            'company_id' => $this->company->id,
+            'user_id' => $this->user->id,
+        ]);
+
+
+        $ec = ExpenseCategory::factory()->create([
+            'company_id' => $this->company->id,
+            'user_id' => $this->user->id,
+            'name' => 'Test Category',
+        ]);
+
+        nlog("expense category id = {$ec->hashed_id}");
+
+        $data = [
+            'category_id' => $ec->hashed_id,
+            'action' => 'bulk_categorize',
+            'ids' => [$this->encodePrimaryKey($e->id)],
+        ];
+
+        $response = $this->withHeaders([
+            'X-API-SECRET' => config('ninja.api_secret'),
+            'X-API-TOKEN' => $this->token,
+        ])->post('/api/v1/expenses/bulk', $data);
+
+        $arr = $response->json();
+        nlog($arr);
+
+        $this->assertEquals($ec->hashed_id, $arr['data'][0]['category_id']);
+    }
+
 
     public function testAddingExpense()
     {

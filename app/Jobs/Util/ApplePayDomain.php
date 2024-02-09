@@ -22,7 +22,10 @@ use Illuminate\Queue\SerializesModels;
 
 class ApplePayDomain implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     private CompanyGateway $company_gateway;
 
@@ -75,6 +78,6 @@ class ApplePayDomain implements ShouldQueue
 
         $parsed_url = parse_url($domain);
 
-        return $parsed_url['host'];
+        return $parsed_url['host'] ?? '';
     }
 }

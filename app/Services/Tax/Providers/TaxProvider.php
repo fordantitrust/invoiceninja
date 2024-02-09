@@ -13,11 +13,9 @@ namespace App\Services\Tax\Providers;
 
 use App\Models\Client;
 use App\Models\Company;
-use App\Services\Tax\Providers\EuTax;
 
 class TaxProvider
 {
-
     public array $eu_countries = [
         "AT",
         "BE",
@@ -49,7 +47,7 @@ class TaxProvider
     ];
 
     private string $provider = ZipTax::class;
-    
+
     private mixed $api_credentials;
 
     private bool $updated_client = false;
@@ -57,7 +55,7 @@ class TaxProvider
     public function __construct(public Company $company, public ?Client $client = null)
     {
     }
-    
+
     /**
      * Flag if tax has been updated successfull.
      *
@@ -75,22 +73,24 @@ class TaxProvider
      */
     public function updateCompanyTaxData(): self
     {
-        $this->configureProvider($this->provider, $this->company->country()->iso_3166_2); //hard coded for now to one provider, but we'll be able to swap these out later
-
-        $company_details = [
-            'address2' => $this->company->settings->address2,
-            'address1' => $this->company->settings->address1,
-            'city' => $this->company->settings->city,
-            'state' => $this->company->settings->state,
-            'postal_code' => $this->company->settings->postal_code,
-            'country' => $this->company->country()->name,
-        ];
 
         try {
+
+            $this->configureProvider($this->provider, $this->company->country()->iso_3166_2); //hard coded for now to one provider, but we'll be able to swap these out later
+
+            $company_details = [
+                'address2' => $this->company->settings->address2,
+                'address1' => $this->company->settings->address1,
+                'city' => $this->company->settings->city,
+                'state' => $this->company->settings->state,
+                'postal_code' => $this->company->settings->postal_code,
+                'country' => $this->company->country()->name,
+            ];
+
             $tax_provider = new $this->provider($company_details);
 
             $tax_provider->setApiCredentials($this->api_credentials);
-                
+
             $tax_data = $tax_provider->run();
 
             if($tax_data) {
@@ -98,16 +98,15 @@ class TaxProvider
                 $this->company->saveQuietly();
                 $this->updated_client = true;
             }
-            
-        }
-        catch(\Exception $e){
+
+        } catch(\Exception $e) {
             nlog("Could not updated company tax data: " . $e->getMessage());
         }
 
         return $this;
 
     }
-    
+
     /**
      * updateClientTaxData
      *
@@ -117,7 +116,7 @@ class TaxProvider
     {
         $this->configureProvider($this->provider, $this->client->country->iso_3166_2); //hard coded for now to one provider, but we'll be able to swap these out later
 
-        $billing_details =[
+        $billing_details = [
             'address2' => $this->client->address2,
             'address1' => $this->client->address1,
             'city' => $this->client->city,
@@ -126,25 +125,25 @@ class TaxProvider
             'country' => $this->client->country->name,
         ];
 
-        $shipping_details =[
+        $shipping_details = [
             'address2' => $this->client->shipping_address2,
             'address1' => $this->client->shipping_address1,
             'city' => $this->client->shipping_city,
             'state' => $this->client->shipping_state,
             'postal_code' => $this->client->shipping_postal_code,
-            'country' => $this->client?->shipping_country?->name,
+            'country' => $this->client->shipping_country()->exists() ? $this->client->shipping_country->name : $this->client->country->name,
         ];
 
         $taxable_address = $this->taxShippingAddress() ? $shipping_details : $billing_details;
-        
+
         $tax_provider = new $this->provider($taxable_address);
 
         $tax_provider->setApiCredentials($this->api_credentials);
-        
+
         $tax_data = $tax_provider->run();
 
-        nlog($tax_data);
-        
+        // nlog($tax_data);
+
         if($tax_data) {
             $this->client->tax_data = $tax_data;
             $this->client->saveQuietly();
@@ -154,7 +153,7 @@ class TaxProvider
         return $this;
 
     }
-    
+
     /**
      * taxShippingAddress
      *
@@ -162,14 +161,15 @@ class TaxProvider
      */
     private function taxShippingAddress(): bool
     {
-        
-        if($this->client->shipping_country_id == "840" && strlen($this->client->shipping_postal_code) > 3)
+
+        if($this->client->shipping_country_id == "840" && strlen($this->client->shipping_postal_code) > 3) {
             return true;
+        }
 
         return false;
 
     }
-    
+
     /**
      * configureProvider
      *
@@ -180,7 +180,7 @@ class TaxProvider
     private function configureProvider(?string $provider, string $country_code): self
     {
 
-        match($country_code){
+        match($country_code) {
             'US' => $this->configureZipTax(),
             "AT" => $this->configureEuTax(),
             "BE" => $this->configureEuTax(),
@@ -215,7 +215,7 @@ class TaxProvider
         return $this;
 
     }
-    
+
     /**
      * configureEuTax
      *
@@ -223,11 +223,13 @@ class TaxProvider
      */
     private function configureEuTax(): self
     {
+        throw new \Exception("No tax region defined for this country");
+
         $this->provider = EuTax::class;
 
         return $this;
     }
-    
+
     /**
      * noTaxRegionDefined
      *
@@ -239,7 +241,7 @@ class TaxProvider
 
         // return $this;
     }
-    
+
     /**
      * configureZipTax
      *
@@ -247,11 +249,12 @@ class TaxProvider
      */
     private function configureZipTax(): self
     {
-        if(!config('services.tax.zip_tax.key'))
+        if(!config('services.tax.zip_tax.key')) {
             throw new \Exception("ZipTax API key not set in .env file");
+        }
 
         $this->api_credentials = config('services.tax.zip_tax.key');
-        
+
         $this->provider = ZipTax::class;
 
         return $this;

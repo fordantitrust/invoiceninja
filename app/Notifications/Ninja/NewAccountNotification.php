@@ -13,7 +13,6 @@ namespace App\Notifications\Ninja;
 
 use App\Models\Account;
 use App\Models\Client;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Messages\SlackMessage;
 use Illuminate\Notifications\Notification;
 
@@ -50,7 +49,7 @@ class NewAccountNotification extends Notification
      * Get the mail representation of the notification.
      *
      * @param  mixed  $notifiable
-     * @return MailMessage
+     *
      */
     public function toMail($notifiable)
     {
@@ -74,9 +73,9 @@ class NewAccountNotification extends Notification
         $content = "New Trial Started\n";
         $content .= "{$this->client->name}\n";
         $content .= "Contacts: {$this->client->contacts()->pluck('email')}\n";
-        
 
-        return (new SlackMessage)
+
+        return (new SlackMessage())
                 ->success()
                 ->from(ctrans('texts.notification_bot'))
                 ->image('https://app.invoiceninja.com/favicon.png')

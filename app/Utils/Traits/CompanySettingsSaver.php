@@ -11,11 +11,10 @@
 
 namespace App\Utils\Traits;
 
-use stdClass;
-use App\Utils\Ninja;
-use App\Models\Company;
 use App\DataMapper\CompanySettings;
 use App\Jobs\Company\CompanyTaxRate;
+use App\Models\Company;
+use stdClass;
 
 /**
  * Class CompanySettingsSaver.
@@ -28,6 +27,14 @@ use App\Jobs\Company\CompanyTaxRate;
  */
 trait CompanySettingsSaver
 {
+    private array $string_ids = [
+        'payment_refund_design_id',
+        'payment_receipt_design_id',
+        'delivery_note_design_id',
+        'statement_design_id',
+        'besr_id',
+        'gmail_sending_user_id',
+    ];
     /**
      * Saves a setting object.
      *
@@ -79,22 +86,20 @@ trait CompanySettingsSaver
 
         $entity->settings = $company_settings;
 
-        if($entity?->calculate_taxes && $company_settings->country_id == "840" && array_key_exists('settings', $entity->getDirty()) && !$entity?->account->isFreeHostedClient()) 
-        {
+        if($entity?->calculate_taxes && $company_settings->country_id == "840" && array_key_exists('settings', $entity->getDirty()) && !$entity?->account->isFreeHostedClient()) {
             $old_settings = $entity->getOriginal()['settings'];
-                                
+
             /** Monitor changes of the Postal code */
-            if($old_settings->postal_code != $company_settings->postal_code)
+            if($old_settings->postal_code != $company_settings->postal_code) {
                 CompanyTaxRate::dispatch($entity);
-            
-            
-        }
-        elseif( $entity?->calculate_taxes && $company_settings->country_id == "840" && array_key_exists('calculate_taxes', $entity->getDirty()) && $entity->getOriginal('calculate_taxes') == 0 && !$entity?->account->isFreeHostedClient())
-        {
+            }
+
+
+        } elseif($entity?->calculate_taxes && $company_settings->country_id == "840" && array_key_exists('calculate_taxes', $entity->getDirty()) && $entity->getOriginal('calculate_taxes') == 0 && !$entity?->account->isFreeHostedClient()) {
             CompanyTaxRate::dispatch($entity);
         }
-        
-        
+
+
         $entity->save();
     }
 
@@ -131,7 +136,8 @@ trait CompanySettingsSaver
             elseif (substr($key, -3) == '_id' || substr($key, -14) == 'number_counter') {
                 $value = 'integer';
 
-                if ($key == 'besr_id') {
+                if(in_array($key, $this->string_ids)) {
+                    // if ($key == 'besr_id') {
                     $value = 'string';
                 }
 
@@ -171,7 +177,7 @@ trait CompanySettingsSaver
      * @param  array $settings The settings request() array
      * @return stdClass       stdClass object
      */
-    private function checkSettingType($settings) : stdClass
+    private function checkSettingType($settings): stdClass
     {
         $settings = (object) $settings;
 
@@ -199,13 +205,17 @@ trait CompanySettingsSaver
             if (substr($key, -3) == '_id' || substr($key, -14) == 'number_counter') {
                 $value = 'integer';
 
-                if ($key == 'gmail_sending_user_id') {
+                if(in_array($key, $this->string_ids)) {
                     $value = 'string';
                 }
 
-                if ($key == 'besr_id') {
-                    $value = 'string';
-                }
+                // if ($key == 'gmail_sending_user_id') {
+                //     $value = 'string';
+                // }
+
+                // if ($key == 'besr_id') {
+                //     $value = 'string';
+                // }
 
                 if (! property_exists($settings, $key)) {
                     continue;
@@ -255,7 +265,7 @@ trait CompanySettingsSaver
      * @param  string $value The object property
      * @return bool        TRUE if the property is the expected type
      */
-    private function checkAttribute($key, $value) :bool
+    private function checkAttribute($key, $value): bool
     {
         switch ($key) {
             case 'int':
@@ -266,7 +276,7 @@ trait CompanySettingsSaver
             case 'float':
             case 'double':
                 return ! is_string($value) && (is_float($value) || is_numeric(strval($value)));
-//                return is_float($value) || is_numeric(strval($value));
+                //                return is_float($value) || is_numeric(strval($value));
             case 'string':
                 return (is_string($value) && method_exists($value, '__toString')) || is_null($value) || is_string($value);
             case 'bool':

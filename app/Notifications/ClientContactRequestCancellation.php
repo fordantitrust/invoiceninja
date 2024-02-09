@@ -14,7 +14,6 @@ namespace App\Notifications;
 use Closure;
 use Illuminate\Bus\Queueable;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Messages\SlackMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Queue\InteractsWithQueue;
@@ -63,7 +62,7 @@ class ClientContactRequestCancellation extends Notification
      * Get the mail representation of the notification.
      *
      * @param  mixed  $notifiable
-     * @return MailMessage
+     *
      */
     public function toMail($notifiable)
     {
@@ -88,7 +87,7 @@ class ClientContactRequestCancellation extends Notification
         $client_name = $this->client_contact->client->present()->name();
         $recurring_invoice_number = $this->recurring_invoice->number;
 
-        return (new SlackMessage)
+        return (new SlackMessage())
                 ->success()
                 ->to('#devv2')
                 ->from('System')

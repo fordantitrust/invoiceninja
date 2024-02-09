@@ -52,7 +52,7 @@
     <div class="flex items-center justify-between mt-6">
         <div class="flex items-center">
             <span class="mr-2 text-sm hidden md:block">{{ ctrans('texts.per_page') }}</span>
-            <select wire:model="per_page" class="form-select py-1 text-sm">
+            <select wire:model.live="per_page" class="form-select py-1 text-sm">
                 <option>5</option>
                 <option selected>10</option>
                 <option>15</option>
@@ -94,8 +94,8 @@
                             <td class="px-6 py-4 whitespace-nowrap text-sm leading-5 text-gray-500">
                                 <input type="checkbox" class="form-checkbox cursor-pointer" onchange="appendToElement('multiple-downloads', '{{ $document->hashed_id }}')" />
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm leading-5 text-gray-500">
-                                {{ Illuminate\Support\Str::limit($document->name, 40) }}
+                            <td class="px-6 py-4 whitespace-nowrap text-sm leading-5 text-gray-500 truncate">
+                                {{ $document->name }}
                             </td>
 
                             <td class="px-6 py-4 whitespace-nowrap text-sm leading-5 text-gray-500">

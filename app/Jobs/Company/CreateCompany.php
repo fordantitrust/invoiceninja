@@ -11,16 +11,15 @@
 
 namespace App\Jobs\Company;
 
-use App\Utils\Ninja;
+use App\DataMapper\ClientRegistrationFields;
+use App\DataMapper\CompanySettings;
+use App\DataMapper\Tax\TaxModel;
+use App\Libraries\MultiDB;
 use App\Models\Company;
 use App\Models\Country;
-use App\Libraries\MultiDB;
+use App\Utils\Ninja;
 use App\Utils\Traits\MakesHash;
-use App\DataMapper\Tax\TaxModel;
-use App\DataMapper\CompanySettings;
 use Illuminate\Foundation\Bus\Dispatchable;
-use App\DataMapper\ClientRegistrationFields;
-use App\Factory\TaxRateFactory;
 
 class CreateCompany
 {
@@ -49,13 +48,13 @@ class CreateCompany
      *
      * @return Company|null
      */
-    public function handle() : ?Company
+    public function handle(): ?Company
     {
         $settings = CompanySettings::defaults();
 
         $settings->name = isset($this->request['name']) ? $this->request['name'] : '';
 
-        if($country_id = $this->resolveCountry()){
+        if($country_id = $this->resolveCountry()) {
             $settings->country_id = $country_id;
         }
 
@@ -66,8 +65,8 @@ class CreateCompany
         $company->settings = $settings;
         $company->db = config('database.default');
         $company->enabled_modules = config('ninja.enabled_modules');
-        $company->subdomain = isset($this->request['subdomain']) ? $this->request['subdomain'] : '';
-        $company->custom_fields = new \stdClass;
+        $company->subdomain = isset($this->request['subdomain']) ? $this->request['subdomain'] : MultiDB::randomSubdomainGenerator();
+        $company->custom_fields = new \stdClass();
         $company->default_password_timeout = 1800000;
         $company->client_registration_fields = ClientRegistrationFields::generate();
         $company->markdown_email_enabled = true;
@@ -84,44 +83,46 @@ class CreateCompany
         match($settings->country_id) {
             '724' => $company = $this->spanishSetup($company),
             '36'  => $company = $this->australiaSetup($company),
+            '710' => $company = $this->southAfticaSetup($company),
             default => $company->save(),
         };
 
         return $company;
     }
-    
+
     /**
      * Resolve Country
      *
      * @return string
      */
-    private function resolveCountry(): string 
+    private function resolveCountry(): string
     {
-        try{
-            
+        try {
+
             $ip = request()->ip();
 
-            if(request()->hasHeader('cf-ipcountry')){
+            if(request()->hasHeader('cf-ipcountry')) {
 
-                $c = Country::where('iso_3166_2', request()->header('cf-ipcountry'))->first();
-                
-                if($c)
+                $c = Country::query()->where('iso_3166_2', request()->header('cf-ipcountry'))->first();
+
+                if($c) {
                     return (string)$c->id;
+                }
 
             }
 
             $details = json_decode(file_get_contents("http://ip-api.com/json/{$ip}"));
 
-            if($details && property_exists($details, 'countryCode')){
+            if($details && property_exists($details, 'countryCode')) {
 
-                $c = Country::where('iso_3166_2', $details->countryCode)->first();
+                $c = Country::query()->where('iso_3166_2', $details->countryCode)->first();
 
-                if($c)
+                if($c) {
                     return (string)$c->id;
+                }
 
             }
-        }
-        catch(\Exception $e){
+        } catch(\Exception $e) {
             nlog("Could not resolve country => {$e->getMessage()}");
         }
 
@@ -133,7 +134,7 @@ class CreateCompany
     {
         try {
 
-            $custom_fields = new \stdClass;
+            $custom_fields = new \stdClass();
             $custom_fields->contact1 = "Rol|CONTABLE,FISCAL,GESTOR,RECEPTOR,TRAMITADOR,PAGADOR,PROPONENTE,B2B_FISCAL,B2B_PAYER,B2B_BUYER,B2B_COLLECTOR,B2B_SELLER,B2B_PAYMENT_RECEIVER,B2B_COLLECTION_RECEIVER,B2B_ISSUER";
             $custom_fields->contact2 = "Code|single_line_text";
             $custom_fields->contact3 = "Nombre|single_line_text";
@@ -152,25 +153,49 @@ class CreateCompany
 
             $company->save();
 
-            //user does not exist yet.
-            // MultiDB::setDb($company->db);
-            // $user = \App\Models\User::where('account_id', $company->account_id)->first();
-
-            // $tax_rate = TaxRateFactory::create($company->id, $user->id);
-            // $tax_rate->name = $company->tax_data->regions->EU->subregions->ES->tax_name;
-            // $tax_rate->rate = $company->tax_data->regions->EU->subregions->ES->tax_rate;
-            // $tax_rate->save();
-
             return $company;
 
-        }
-        catch(\Exception $e){
+        } catch(\Exception $e) {
             nlog("SETUP: could not complete setup for Spanish Locale");
         }
 
         $company->save();
 
         return $company;
+
+    }
+
+    private function southAfticaSetup(Company $company): Company
+    {
+
+        try {
+
+            $company->enabled_item_tax_rates = 1;
+            $company->enabled_tax_rates = 1;
+
+            $translations = new \stdClass();
+            $translations->invoice = "Tax Invoice";
+
+            $settings = $company->settings;
+            $settings->currency_id = '4';
+            $settings->timezone_id = '56';
+            $settings->translations = $translations;
+
+            $company->settings = $settings;
+
+            $company->save();
+
+            return $company;
+
+        } catch(\Exception $e) {
+            nlog($e->getMessage());
+            nlog("SETUP: could not complete setup for South African Locale");
+        }
+
+        $company->save();
+
+        return $company;
+
 
     }
 
@@ -181,7 +206,7 @@ class CreateCompany
             $company->enabled_item_tax_rates = 1;
             $company->enabled_tax_rates = 1;
 
-            $translations = new \stdClass;
+            $translations = new \stdClass();
             $translations->invoice = "Tax Invoice";
 
             $settings = $company->settings;
@@ -190,24 +215,12 @@ class CreateCompany
             $settings->translations = $translations;
 
             $company->settings = $settings;
-            
+
             $company->save();
-
-            //$user = $company->account->users()->first();
-            //user does not exist yet.
-            // MultiDB::setDb($company->db);
-            // $user = \App\Models\User::where('account_id', $company->account_id)->first();
-
-
-            // $tax_rate = TaxRateFactory::create($company->id, $user->id);
-            // $tax_rate->name = $company->tax_data->regions->AU->subregions->AU->tax_name;
-            // $tax_rate->rate = $company->tax_data->regions->AU->subregions->AU->tax_rate;
-            // $tax_rate->save();
 
             return $company;
 
-        }
-        catch(\Exception $e){
+        } catch(\Exception $e) {
             nlog($e->getMessage());
             nlog("SETUP: could not complete setup for Australian Locale");
         }

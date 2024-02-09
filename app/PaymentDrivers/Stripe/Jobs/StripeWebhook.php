@@ -23,7 +23,11 @@ use Illuminate\Queue\SerializesModels;
 
 class StripeWebhook implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, Utilities;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
+    use Utilities;
 
     public $tries = 1;
 
@@ -58,6 +62,7 @@ class StripeWebhook implements ShouldQueue
 
         $company = Company::where('company_key', $this->company_key)->first();
 
+        /** @var \App\Models\CompanyGateway $company_gateway **/
         $company_gateway = CompanyGateway::find($this->company_gateway_id);
 
         $stripe = $company_gateway->driver()->init();

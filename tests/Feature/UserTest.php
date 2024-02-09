@@ -11,21 +11,21 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use App\Models\User;
-use App\Models\Account;
-use App\Models\Company;
-use Tests\MockAccountData;
-use App\Models\CompanyUser;
-use App\Models\CompanyToken;
 use App\DataMapper\CompanySettings;
 use App\Factory\CompanyUserFactory;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Session;
 use App\Http\Middleware\PasswordProtection;
-use Illuminate\Validation\ValidationException;
-use Illuminate\Routing\Middleware\ThrottleRequests;
+use App\Models\Account;
+use App\Models\Company;
+use App\Models\CompanyToken;
+use App\Models\CompanyUser;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Routing\Middleware\ThrottleRequests;
+use Illuminate\Support\Facades\Session;
+use Illuminate\Validation\ValidationException;
+use Tests\MockAccountData;
+use Tests\TestCase;
 
 /**
  * @test
@@ -37,6 +37,8 @@ class UserTest extends TestCase
     use DatabaseTransactions;
 
     private $default_email = 'attach@gmail.com';
+
+    public $faker;
 
     protected function setUp() :void
     {
@@ -50,7 +52,7 @@ class UserTest extends TestCase
 
         Model::reguard();
 
-        $this->withoutExceptionHandling();
+        // $this->withoutExceptionHandling();
 
         $this->withoutMiddleware(
             ThrottleRequests::class,
@@ -58,9 +60,8 @@ class UserTest extends TestCase
         );
     }
 
-    public function testUserAttemptingtToDeleteThemselves()
+    private function mockAccount()
     {
-
 
         $account = Account::factory()->create([
             'hosted_client_count' => 1000,
@@ -74,6 +75,7 @@ class UserTest extends TestCase
             'account_id' => $this->account->id,
             'confirmation_code' => 'xyz123',
             'email' => $this->faker->unique()->safeEmail(),
+            'password' => \Illuminate\Support\Facades\Hash::make('ALongAndBriliantPassword'),
         ]);
 
         $settings = CompanySettings::defaults();
@@ -101,24 +103,188 @@ class UserTest extends TestCase
         $company_token->name = 'test token';
         $company_token->token = $token;
         $company_token->is_system = true;
+        $company_token->save();
+
+        return $company_token;
+
+    }
+
+    public function testUserLocale()
+    {
+        $this->user->language_id = "13";
+        $this->user->save();
+
+        $this->assertEquals("fr_CA", $this->user->getLocale());
+
+        $response = $this->withHeaders([
+            'X-API-SECRET' => config('ninja.api_secret'),
+            'X-API-TOKEN' => $this->token,
+        ])->get('/api/v1/statics');
+
+        $response->assertStatus(200);
+
+    }
+
+
+
+    public function testUserResponse()
+    {
+        $company_token = $this->mockAccount();
+
+        $data = [
+                'first_name' => 'hey',
+                'last_name' => 'you',
+                'email' => 'normal_user@gmail.com',
+                'company_user' => [
+                    'is_admin' => true,
+                    'is_owner' => false,
+                    'permissions' => 'create_client,create_invoice',
+                ],
+                'phone' => null,
+            ];
+
+        $response = $this->withHeaders([
+            'X-API-SECRET' => config('ninja.api_secret'),
+            'X-API-TOKEN' => $company_token->token,
+            'X-API-PASSWORD' => 'ALongAndBriliantPassword',
+        ])->post('/api/v1/users?include=company_user', $data);
+
+        $response->assertStatus(200);
+
+        $user = $response->json();
+        $user_id = $user['data']['id'];
+
+        $response = $this->withHeaders([
+            'X-API-SECRET' => config('ninja.api_secret'),
+            'X-API-TOKEN' => $company_token->token,
+            'X-API-PASSWORD' => 'ALongAndBriliantPassword',
+        ])->get('/api/v1/users', $data);
+
+        $response->assertStatus(200);
+        $arr = $response->json();
+
+        $this->assertCount(2, $arr['data']);
+
+        //archive the user we just created:
+
+        $data = [
+            'action' => 'archive',
+            'ids' => [$user_id],
+        ];
+
+        $response = $this->withHeaders([
+            'X-API-SECRET' => config('ninja.api_secret'),
+            'X-API-TOKEN' => $company_token->token,
+            'X-API-PASSWORD' => 'ALongAndBriliantPassword',
+        ])->postJson('/api/v1/users/bulk', $data);
+
+        $response->assertStatus(200);
+
+        $this->assertCount(1, $response->json()['data']);
+
+        $response = $this->withHeaders([
+            'X-API-SECRET' => config('ninja.api_secret'),
+            'X-API-TOKEN' => $company_token->token,
+            'X-API-PASSWORD' => 'ALongAndBriliantPassword',
+        ])->get("/api/v1/users?without={$company_token->user->hashed_id}");
+
+        $response->assertStatus(200);
+        $this->assertCount(1, $response->json()['data']);
+
+        $response = $this->withHeaders([
+            'X-API-SECRET' => config('ninja.api_secret'),
+            'X-API-TOKEN' => $company_token->token,
+            'X-API-PASSWORD' => 'ALongAndBriliantPassword',
+        ])->get("/api/v1/users?status=active&without={$company_token->user->hashed_id}");
+
+        $response->assertStatus(200);
+        $this->assertCount(0, $response->json()['data']);
+
+        $response = $this->withHeaders([
+            'X-API-SECRET' => config('ninja.api_secret'),
+            'X-API-TOKEN' => $company_token->token,
+            'X-API-PASSWORD' => 'ALongAndBriliantPassword',
+        ])->get("/api/v1/users?status=archived&without={$company_token->user->hashed_id}");
+
+        $response->assertStatus(200);
+        $this->assertCount(1, $response->json()['data']);
+        
+        $response = $this->withHeaders([
+            'X-API-SECRET' => config('ninja.api_secret'),
+            'X-API-TOKEN' => $company_token->token,
+            'X-API-PASSWORD' => 'ALongAndBriliantPassword',
+        ])->get("/api/v1/users?status=deleted&without={$company_token->user->hashed_id}");
+
+        $response->assertStatus(200);
+        $this->assertCount(0, $response->json()['data']);
+
+
+    }
+
+    public function testUserAttemptingtToDeleteThemselves()
+    {
+
+        $account = Account::factory()->create([
+            'hosted_client_count' => 1000,
+            'hosted_company_count' => 1000,
+        ]);
+
+        $account->num_users = 3;
+        $account->save();
+
+        $user = User::factory()->create([
+            'account_id' => $this->account->id,
+            'confirmation_code' => 'xyz123',
+            'email' => $this->faker->unique()->safeEmail(),
+            'password' => \Illuminate\Support\Facades\Hash::make('ALongAndBriliantPassword'),
+        ]);
+
+        $settings = CompanySettings::defaults();
+        $settings->client_online_payment_notification = false;
+        $settings->client_manual_payment_notification = false;
+
+        $company = Company::factory()->create([
+            'account_id' => $account->id,
+            'settings' => $settings,
+        ]);
+
+
+        $cu = CompanyUserFactory::create($user->id, $company->id, $account->id);
+        $cu->is_owner = true;
+        $cu->is_admin = true;
+        $cu->is_locked = false;
+        $cu->save();
+
+        $token = \Illuminate\Support\Str::random(64);
+
+        $company_token = new CompanyToken();
+        $company_token->user_id = $user->id;
+        $company_token->company_id = $company->id;
+        $company_token->account_id = $account->id;
+        $company_token->name = 'test token';
+        $company_token->token = $token;
+        $company_token->is_system = true;
+        $company_token->save();
 
         $data = [
             'ids' => [$user->hashed_id],
-                ];
+        ];
 
         $response = $this->withHeaders([
             'X-API-SECRET' => config('ninja.api_secret'),
             'X-API-TOKEN' => $token,
             'X-API-PASSWORD' => 'ALongAndBriliantPassword',
-        ])->postJson('/api/v1/users/bulk?action=dete', $data)
-        ->assertStatus(403);
+        ])->postJson('/api/v1/users/bulk?action=delete', $data);
 
+        nlog($response);
+
+        $response->assertStatus(401);
 
     }
 
     public function testDisconnectUserOauthMailer()
     {
-        $user = 
+        $user =
         User::factory()->create([
             'account_id' => $this->account->id,
             'email' => $this->faker->safeEmail(),
@@ -224,6 +390,7 @@ class UserTest extends TestCase
                 'is_admin' => false,
                 'is_owner' => false,
                 'permissions' => 'create_client,create_invoice',
+                'notifications' => '',
             ],
             'phone' => "",
         ];
@@ -247,6 +414,7 @@ class UserTest extends TestCase
                 'is_admin' => false,
                 'is_owner' => false,
                 'permissions' => 'create_client,create_invoice',
+                'notifications' => '',
             ],
         ];
 
@@ -291,9 +459,6 @@ class UserTest extends TestCase
         $response->assertStatus(200);
 
         $arr = $response->json();
-
-        // $this->assertNotNull($user->company_user);
-        // $this->assertEquals($user->company_user->company_id, $this->company->id);
 
         $response = $this->withHeaders([
             'X-API-SECRET' => config('ninja.api_secret'),

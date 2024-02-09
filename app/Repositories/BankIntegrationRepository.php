@@ -11,9 +11,9 @@
 
 namespace App\Repositories;
 
-use App\Utils\Ninja;
-use App\Models\BankIntegration;
 use App\Helpers\Bank\Yodlee\Yodlee;
+use App\Models\BankIntegration;
+use App\Utils\Ninja;
 
 /**
  * Class for bank integration repository.
@@ -24,27 +24,26 @@ class BankIntegrationRepository extends BaseRepository
     {
         //stub to store
         $bank_integration->fill($data);
-        
+
         $bank_integration->save();
 
         return $bank_integration->fresh();
     }
 
-     /**
-     * Removes the bank integration from Yodlee
-     * 
-     * @param BankIntegration $bank_integration
-     * 
-     * @return BankIntegration $bank_integration
-     */
-    public function delete($bank_integration) :BankIntegration
+    /**
+    * Removes the bank integration from Yodlee
+    *
+    * @param BankIntegration $bank_integration
+    *
+    * @return BankIntegration $bank_integration
+    */
+    public function delete($bank_integration): BankIntegration
     {
         if ($bank_integration->is_deleted) {
             return $bank_integration;
         }
 
-        if(Ninja::isHosted())
-        {
+        if(Ninja::isHosted()) {
 
             $account = $bank_integration->account;
 
@@ -54,13 +53,12 @@ class BankIntegrationRepository extends BaseRepository
 
             try {
                 $yodlee->deleteAccount($bank_integration->bank_account_id);
-            }
-            catch(\Exception $e){
+            } catch(\Exception $e) {
 
             }
 
         }
-        
+
         parent::delete($bank_integration);
 
         return $bank_integration;

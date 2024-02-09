@@ -17,9 +17,10 @@ class CreateStatementRequest extends Request
      */
     public function authorize(): bool
     {
-        // return auth()->user()->isAdmin();
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
 
-        return auth()->user()->can('view', $this->client());
+        return $user->can('view', $this->client());
     }
 
     /**
@@ -29,14 +30,18 @@ class CreateStatementRequest extends Request
      */
     public function rules()
     {
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
         return [
             'start_date' => 'required|date_format:Y-m-d',
             'end_date'   => 'required|date_format:Y-m-d',
-            'client_id'  => 'bail|required|exists:clients,id,company_id,'.auth()->user()->company()->id,
+            'client_id'  => 'bail|required|exists:clients,id,company_id,'.$user->company()->id,
             'show_payments_table' => 'boolean',
             'show_aging_table' => 'boolean',
             'show_credits_table' => 'boolean',
             'status' => 'string',
+            'template' => 'sometimes|string|nullable',
         ];
     }
 
@@ -57,6 +62,6 @@ class CreateStatementRequest extends Request
 
     public function client(): ?Client
     {
-        return Client::without('company')->where('id', $this->client_id)->withTrashed()->first();
+        return Client::query()->without('company')->where('id', $this->client_id)->withTrashed()->first();
     }
 }

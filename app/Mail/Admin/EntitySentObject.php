@@ -62,7 +62,7 @@ class EntitySentObject
         $this->setTemplate();
 
         if ($this->template == 'purchase_order') {
-            $mail_obj = new stdClass;
+            $mail_obj = new stdClass();
             $mail_obj->amount = Number::formatMoney($this->entity->amount, $this->entity->vendor);
             $mail_obj->subject = ctrans(
                 $this->template_subject,
@@ -73,7 +73,7 @@ class EntitySentObject
             );
             $mail_obj->data = [
                 'title' => $mail_obj->subject,
-                'message' => ctrans(
+                'content' => ctrans(
                     $this->template_body,
                     [
                         'amount' => $mail_obj->amount,
@@ -91,7 +91,7 @@ class EntitySentObject
             $mail_obj->markdown = 'email.admin.generic';
             $mail_obj->tag = $this->company->company_key;
         } else {
-            $mail_obj = new stdClass;
+            $mail_obj = new stdClass();
             $mail_obj->amount = $this->getAmount();
             $mail_obj->subject = $this->getSubject();
             $mail_obj->data = $this->getData();
@@ -99,6 +99,8 @@ class EntitySentObject
             $mail_obj->tag = $this->company->company_key;
         }
         
+        $mail_obj->text_view = 'email.template.text';
+
         return $mail_obj;
     }
 
@@ -183,16 +185,18 @@ class EntitySentObject
     private function getData()
     {
         $settings = $this->entity->client->getMergedSettings();
-
+        $content = $this->getMessage();
+        
         return [
             'title' => $this->getSubject(),
-            'message' => $this->getMessage(),
+            'content' => $content,
             'url' => $this->invitation->getAdminLink($this->use_react_url),
             'button' => ctrans("texts.view_{$this->entity_type}"),
             'signature' => $settings->email_signature,
             'logo' => $this->company->present()->logo(),
             'settings' => $settings,
             'whitelabel' => $this->company->account->isPaid() ? true : false,
+            'text_body' => $content,
         ];
     }
 }

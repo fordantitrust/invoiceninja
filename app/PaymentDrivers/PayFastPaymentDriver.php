@@ -40,7 +40,7 @@ class PayFastPaymentDriver extends BaseDriver
         GatewayType::CREDIT_CARD => CreditCard::class,
     ];
 
-    const SYSTEM_LOG_TYPE = SystemLog::TYPE_PAYFAST;
+    public const SYSTEM_LOG_TYPE = SystemLog::TYPE_PAYFAST;
 
     //developer resources
     //https://sandbox.payfast.co.za/
@@ -69,7 +69,7 @@ class PayFastPaymentDriver extends BaseDriver
     public function init()
     {
         try {
-            $this->payfast = new \PayFast\PayFastPayment(
+            $this->payfast = new \Payfast\PayFastPayment(
                 [
                     'merchantId' => $this->company_gateway->getConfigField('merchantId'),
                     'merchantKey' => $this->company_gateway->getConfigField('merchantKey'),

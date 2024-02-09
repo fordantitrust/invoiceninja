@@ -11,31 +11,31 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
-use App\Utils\Ninja;
-use App\Models\CompanyUser;
-use App\Factory\UserFactory;
-use App\Filters\UserFilters;
-use Illuminate\Http\Response;
-use App\Utils\Traits\MakesHash;
 use App\Events\User\UserWasCreated;
 use App\Events\User\UserWasDeleted;
 use App\Events\User\UserWasUpdated;
-use App\Jobs\User\UserEmailChanged;
-use App\Repositories\UserRepository;
-use App\Transformers\UserTransformer;
-use App\Jobs\Company\CreateCompanyToken;
-use App\Http\Requests\User\BulkUserRequest;
-use App\Http\Requests\User\EditUserRequest;
-use App\Http\Requests\User\ShowUserRequest;
-use App\Http\Requests\User\StoreUserRequest;
-use App\Http\Requests\User\CreateUserRequest;
-use App\Http\Requests\User\UpdateUserRequest;
-use App\Http\Requests\User\DestroyUserRequest;
-use App\Http\Requests\User\ReconfirmUserRequest;
+use App\Factory\UserFactory;
+use App\Filters\UserFilters;
 use App\Http\Controllers\Traits\VerifiesUserEmail;
+use App\Http\Requests\User\BulkUserRequest;
+use App\Http\Requests\User\CreateUserRequest;
+use App\Http\Requests\User\DestroyUserRequest;
 use App\Http\Requests\User\DetachCompanyUserRequest;
 use App\Http\Requests\User\DisconnectUserMailerRequest;
+use App\Http\Requests\User\EditUserRequest;
+use App\Http\Requests\User\ReconfirmUserRequest;
+use App\Http\Requests\User\ShowUserRequest;
+use App\Http\Requests\User\StoreUserRequest;
+use App\Http\Requests\User\UpdateUserRequest;
+use App\Jobs\Company\CreateCompanyToken;
+use App\Jobs\User\UserEmailChanged;
+use App\Models\CompanyUser;
+use App\Models\User;
+use App\Repositories\UserRepository;
+use App\Transformers\UserTransformer;
+use App\Utils\Ninja;
+use App\Utils\Traits\MakesHash;
+use Illuminate\Http\Response;
 
 /**
  * Class UserController.
@@ -109,13 +109,15 @@ class UserController extends BaseController
 
         $user_agent = request()->input('token_name') ?: request()->server('HTTP_USER_AGENT');
 
+        $is_react = $request->hasHeader('X-React') ?? false;
+
         $ct = (new CreateCompanyToken($company, $user, $user_agent))->handle();
 
-        event(new UserWasCreated($user, auth()->user(), $company, Ninja::eventVars(auth()->user() ? auth()->user()->id : null)));
+        event(new UserWasCreated($user, auth()->user(), $company, Ninja::eventVars(auth()->user() ? auth()->user()->id : null), $is_react));
 
         $user->setCompany($company);
         $user->company_id = $company->id;
-        
+
         return $this->itemResponse($user);
     }
 
@@ -175,7 +177,8 @@ class UserController extends BaseController
             $user->oauth_user_refresh_token = null;
             $user->oauth_user_token = null;
             $user->save();
-            UserEmailChanged::dispatch($new_user, json_decode($old_user), $logged_in_user->company());
+
+            UserEmailChanged::dispatch($new_user, json_decode($old_user), $logged_in_user->company(), $request->hasHeader('X-React'));
         }
 
         event(new UserWasUpdated($user, $logged_in_user, $logged_in_user->company(), Ninja::eventVars($logged_in_user->id)));
@@ -188,13 +191,13 @@ class UserController extends BaseController
      *
      * @param DestroyUserRequest $request
      * @param User $user
-     * @return JsonResponse | Response
+     * @return \Illuminate\Http\JsonResponse
      *
      */
     public function destroy(DestroyUserRequest $request, User $user)
     {
-        if ($user->isOwner()) {
-            return response()->json(['message', 'Cannot detach owner.'], 400);
+        if ($user->hasOwnerFlag()) {
+            return response()->json(['message', 'Cannot detach owner.'], 401);
         }
 
         /* If the user passes the company user we archive the company user */
@@ -232,7 +235,7 @@ class UserController extends BaseController
         $return_user_collection = collect();
 
         /** @var \App\Models\User $logged_in_user */
-        $logged_in_user = auth()->user(); 
+        $logged_in_user = auth()->user();
 
         $users->each(function ($user, $key) use ($logged_in_user, $action, $return_user_collection) {
             if ($logged_in_user->can('edit', $user)) {
@@ -291,7 +294,7 @@ class UserController extends BaseController
         /** @var \App\Models\User $logged_in_user */
         $logged_in_user = auth()->user();
 
-        $user->service()->invite($logged_in_user->company());
+        $user->service()->invite($logged_in_user->company(), $request->hasHeader('X-REACT'));
 
         return response()->json(['message' => ctrans('texts.confirmation_resent')], 200);
     }
@@ -309,7 +312,7 @@ class UserController extends BaseController
         /** @var \App\Models\User $logged_in_user */
         $logged_in_user = auth()->user();
 
-        $user->service()->invite($logged_in_user->company());
+        $user->service()->invite($logged_in_user->company(), $request->hasHeader('X-REACT'));
 
         return response()->json(['message' => ctrans('texts.confirmation_resent')], 200);
     }

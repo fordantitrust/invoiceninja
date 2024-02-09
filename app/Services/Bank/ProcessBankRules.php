@@ -32,7 +32,10 @@ class ProcessBankRules extends AbstractService
     protected $categories;
 
     protected $invoices;
-    
+
+    /**
+     * @param \App\Models\BankTransaction $bank_transaction
+     */
     public function __construct(public BankTransaction $bank_transaction)
     {
     }
@@ -48,7 +51,7 @@ class ProcessBankRules extends AbstractService
 
     private function matchCredit()
     {
-        $this->invoices = Invoice::where('company_id', $this->bank_transaction->company_id)
+        $this->invoices = Invoice::query()->where('company_id', $this->bank_transaction->company_id)
                                 ->whereIn('status_id', [1,2,3])
                                 ->where('is_deleted', 0)
                                 ->get();
@@ -136,7 +139,7 @@ class ProcessBankRules extends AbstractService
         }
     }
 
-    private function coalesceExpenses($expense): string 
+    private function coalesceExpenses($expense): string
     {
 
         if (!$this->bank_transaction->expense_id || strlen($this->bank_transaction->expense_id) < 1) {
@@ -151,7 +154,7 @@ class ProcessBankRules extends AbstractService
     {
         $category = $this->categories->firstWhere('highLevelCategoryId', $this->bank_transaction->category_id);
 
-        $ec = ExpenseCategory::where('company_id', $this->bank_transaction->company_id)->where('bank_category_id', $this->bank_transaction->category_id)->first();
+        $ec = ExpenseCategory::query()->where('company_id', $this->bank_transaction->company_id)->where('bank_category_id', $this->bank_transaction->category_id)->first();
 
         if ($ec) {
             return $ec->id;
@@ -167,7 +170,7 @@ class ProcessBankRules extends AbstractService
         }
     }
 
-    private function matchNumberOperator($bt_value, $rule_value, $operator) :bool
+    private function matchNumberOperator($bt_value, $rule_value, $operator): bool
     {
         return match ($operator) {
             '>' => floatval($bt_value) > floatval($rule_value),
@@ -179,7 +182,7 @@ class ProcessBankRules extends AbstractService
         };
     }
 
-    private function matchStringOperator($bt_value, $rule_value, $operator) :bool
+    private function matchStringOperator($bt_value, $rule_value, $operator): bool
     {
         $bt_value = strtolower(str_replace(" ", "", $bt_value));
         $rule_value = strtolower(str_replace(" ", "", $rule_value));

@@ -19,6 +19,7 @@ use App\Models\Client;
 use App\Models\Credit;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Models\Paymentable;
 use App\Utils\Ninja;
 use App\Utils\Traits\MakesHash;
 use App\Utils\Traits\SavesDocuments;
@@ -75,14 +76,14 @@ class PaymentRepository extends BaseRepository
             $is_existing_payment = false;
 
             \DB::connection(config('database.default'))->transaction(function () use ($data) {
-                $client = Client::where('id', $data['client_id'])->withTrashed()->lockForUpdate()->first();
+                $client = Client::query()->where('id', $data['client_id'])->withTrashed()->lockForUpdate()->first();
 
                 /*We only update the paid to date ONCE per payment*/
                 if (array_key_exists('invoices', $data) && is_array($data['invoices']) && count($data['invoices']) > 0) {
                     if ($data['amount'] == '') {
                         $data['amount'] = array_sum(array_column($data['invoices'], 'amount'));
                     }
-                    
+
                     $client->service()->updatePaidToDate($data['amount'])->save();
                     $client->saveQuietly();
                 } else {
@@ -100,14 +101,23 @@ class PaymentRepository extends BaseRepository
                     $client->saveQuietly();
                 }
             }, 1);
+
+            $client = Client::query()->where('id', $data['client_id'])->withTrashed()->first();
+
         }
 
         /*Fill the payment*/
-        $payment->fill($data);
+        $fill_data = $data;
+
+        if($this->import_mode && isset($fill_data['invoices'])) {
+            unset($fill_data['invoices']);
+        }
+
+        $payment->fill($fill_data);
         $payment->is_manual = true;
         $payment->status_id = Payment::STATUS_COMPLETED;
 
-        if (! $payment->currency_id && $client) {
+        if ((!$payment->currency_id || $payment->currency_id == 0) && $client) {
             if (property_exists($client->settings, 'currency_id')) {
                 $payment->currency_id = $client->settings->currency_id;
             } else {
@@ -124,7 +134,6 @@ class PaymentRepository extends BaseRepository
 
         /*Ensure payment number generated*/
         if (! $payment->number || strlen($payment->number) == 0) {
-            // $payment->number = $payment->client->getNextPaymentNumber($payment->client, $payment);
             $payment->service()->applyNumber();
         }
 
@@ -138,14 +147,21 @@ class PaymentRepository extends BaseRepository
 
             $invoices = Invoice::withTrashed()->whereIn('id', array_column($data['invoices'], 'invoice_id'))->get();
 
-            $payment->invoices()->saveMany($invoices);
-
             //todo optimize this into a single query
             foreach ($data['invoices'] as $paid_invoice) {
-                // $invoice = Invoice::withTrashed()->whereId($paid_invoice['invoice_id'])->first();
                 $invoice = $invoices->firstWhere('id', $paid_invoice['invoice_id']);
 
                 if ($invoice) {
+
+                    //25-06-2023
+
+                    $paymentable = new Paymentable();
+                    $paymentable->payment_id = $payment->id;
+                    $paymentable->paymentable_id = $invoice->id;
+                    $paymentable->paymentable_type = 'invoices';
+                    $paymentable->amount = $paid_invoice['amount'];
+                    $paymentable->save();
+
                     $invoice = $invoice->service()
                                        ->markSent()
                                        ->applyPayment($payment, $paid_invoice['amount'])
@@ -153,28 +169,31 @@ class PaymentRepository extends BaseRepository
                 }
             }
         } else {
-            //payment is made, but not to any invoice, therefore we are applying the payment to the clients paid_to_date only
-            //01-07-2020 i think we were duplicating the paid to date here.
-            //$payment->client->service()->updatePaidToDate($payment->amount)->save();
+
         }
 
         if (array_key_exists('credits', $data) && is_array($data['credits'])) {
             $credit_totals = array_sum(array_column($data['credits'], 'amount'));
 
-            // $credits = Credit::whereIn('id', $this->transformKeys(array_column($data['credits'], 'credit_id')))->get();
-
-            $credits = Credit::whereIn('id', array_column($data['credits'], 'credit_id'))->get();
-
-            $payment->credits()->saveMany($credits);
+            $credits = Credit::query()->whereIn('id', array_column($data['credits'], 'credit_id'))->get();
 
             //todo optimize into a single query
             foreach ($data['credits'] as $paid_credit) {
-                // $credit = Credit::withTrashed()->find($paid_credit['credit_id']);
+
+                /** @var \App\Models\Credit $credit **/
                 $credit = $credits->firstWhere('id', $paid_credit['credit_id']);
-                
+
                 if ($credit) {
+
+                    $paymentable = new Paymentable();
+                    $paymentable->payment_id = $payment->id;
+                    $paymentable->paymentable_id = $credit->id;
+                    $paymentable->paymentable_type = Credit::class;
+                    $paymentable->amount = $paid_credit['amount'];
+                    $paymentable->save();
+
                     $credit = $credit->service()->markSent()->save();
-                    (new ApplyCreditPayment($credit, $payment, $paid_credit['amount'], $credit->company))->handle();
+                    (new ApplyCreditPayment($credit, $payment, $paid_credit['amount']))->handle();
                 }
             }
         }
@@ -223,7 +242,7 @@ class PaymentRepository extends BaseRepository
 
             return $payment;
         }
-        
+
         $payment->currency_id = $company_currency;
 
         return $payment;

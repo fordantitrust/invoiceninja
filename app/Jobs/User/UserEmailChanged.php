@@ -28,28 +28,22 @@ use stdClass;
 
 class UserEmailChanged implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-
-    protected $new_user;
-
-    protected $old_user;
-
-    protected $company;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     public $settings;
 
     /**
      * Create a new job instance.
      *
-     * @param string $new_email
-     * @param string $old_email
-     * @param Company $company
+     * @param \App\Models\User $new_user
+     * @param \stdClass $old_user
+     * @param \App\Models\Company $company
      */
-    public function __construct(User $new_user, $old_user, Company $company)
+    public function __construct(protected User $new_user, protected \stdClass $old_user, protected Company $company, protected bool $is_react = false)
     {
-        $this->new_user = $new_user;
-        $this->old_user = $old_user;
-        $this->company = $company;
         $this->settings = $this->company->settings;
     }
 
@@ -64,7 +58,7 @@ class UserEmailChanged implements ShouldQueue
         App::setLocale($this->company->getLocale());
 
         /*Build the object*/
-        $mail_obj = new stdClass;
+        $mail_obj = new stdClass();
         $mail_obj->subject = ctrans('texts.email_address_changed');
         $mail_obj->markdown = 'email.admin.generic';
         $mail_obj->from = [$this->company->owner()->email, $this->company->owner()->present()->name()];
@@ -73,7 +67,7 @@ class UserEmailChanged implements ShouldQueue
 
         //Send email via a Mailable class
 
-        $nmo = new NinjaMailerObject;
+        $nmo = new NinjaMailerObject();
         $nmo->mailable = new UserNotificationMailer($mail_obj);
         $nmo->settings = $this->settings;
         $nmo->company = $this->company;
@@ -81,7 +75,7 @@ class UserEmailChanged implements ShouldQueue
 
         NinjaMailerJob::dispatch($nmo, true);
 
-        $this->new_user->service()->invite($this->company);
+        $this->new_user->service()->invite($this->company, $this->is_react);
     }
 
     private function getData()

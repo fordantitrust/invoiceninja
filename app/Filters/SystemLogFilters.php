@@ -23,7 +23,7 @@ class SystemLogFilters extends QueryFilters
         if (strlen($type_id) == 0) {
             return $this->builder;
         }
-        
+
         return $this->builder->where('type_id', $type_id);
     }
 
@@ -48,7 +48,7 @@ class SystemLogFilters extends QueryFilters
     /**
      * Filter based on search text.
      *
-     * @param string query filter
+     * @param string $filter
      * @return Builder
      * @deprecated
      */
@@ -64,7 +64,7 @@ class SystemLogFilters extends QueryFilters
     /**
      * Sorts the list based on $sort.
      *
-     * @param string sort formatted as column|asc
+     * @param string $sort formatted as column|asc
      * @return Builder
      */
     public function sort(string $sort = ''): Builder
@@ -75,7 +75,9 @@ class SystemLogFilters extends QueryFilters
             return $this->builder;
         }
 
-        return $this->builder->orderBy($sort_col[0], $sort_col[1]);
+        $dir = ($sort_col[1] == 'asc') ? 'asc' : 'desc';
+
+        return $this->builder->orderBy($sort_col[0], $dir);
     }
 
     /**

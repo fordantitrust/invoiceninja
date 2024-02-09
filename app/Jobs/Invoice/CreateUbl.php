@@ -34,11 +34,14 @@ use Illuminate\Queue\SerializesModels;
 
 class CreateUbl implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
-    const INVOICE_TYPE_STANDARD = 380;
+    public const INVOICE_TYPE_STANDARD = 380;
 
-    const INVOICE_TYPE_CREDIT = 381;
+    public const INVOICE_TYPE_CREDIT = 381;
 
     public $invoice;
 
@@ -197,6 +200,7 @@ class CreateUbl implements ShouldQueue
 
         if ($this->invoice->discount != 0) {
             if ($this->invoice->is_amount_discount) {
+                /** @var float $invoice_total */
                 if ($invoice_total + $this->invoice->discount != 0) {
                     $total -= $invoice_total ? ($total / ($invoice_total + $this->invoice->discount) * $this->invoice->discount) : 0;
                 }

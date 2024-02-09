@@ -34,7 +34,7 @@ class HandleCancellation extends AbstractService
             return $this->invoice;
         }
 
-        $adjustment = $this->invoice->balance * -1;
+        $adjustment = ($this->invoice->balance < 0) ? abs($this->invoice->balance) : $this->invoice->balance * -1;
 
         $this->backupCancellation($adjustment);
 
@@ -44,25 +44,14 @@ class HandleCancellation extends AbstractService
         $this->invoice->balance = 0;
         $this->invoice = $this->invoice->service()->setStatus(Invoice::STATUS_CANCELLED)->save();
 
-        //adjust client balance
-        $this->invoice->client->service()->updateBalance($adjustment)->save();
-        // $this->invoice->fresh();
+        // $this->invoice->client->service()->updateBalance($adjustment)->save();
+        $this->invoice->client->service()->calculateBalance();
 
         $this->invoice->service()->workFlow()->save();
 
         event(new InvoiceWasCancelled($this->invoice, $this->invoice->company, Ninja::eventVars(auth()->user() ? auth()->user()->id : null)));
 
         event('eloquent.updated: App\Models\Invoice', $this->invoice);
-
-        $transaction = [
-            'invoice' => $this->invoice->transaction_event(),
-            'payment' => [],
-            'client' => $this->invoice->client->transaction_event(),
-            'credit' => [],
-            'metadata' => [],
-        ];
-
-        // TransactionLog::dispatch(TransactionEvent::INVOICE_CANCELLED, $transaction, $this->invoice->company->db);
 
         return $this->invoice;
     }
@@ -76,13 +65,17 @@ class HandleCancellation extends AbstractService
         $adjustment = $cancellation->adjustment * -1;
 
         $this->invoice->ledger()->updateInvoiceBalance($adjustment, "Invoice {$this->invoice->number} reversal");
-        $this->invoice->fresh();
+
+        $this->invoice = $this->invoice->fresh();
 
         /* Reverse the invoice status and balance */
         $this->invoice->balance += $adjustment;
         $this->invoice->status_id = $cancellation->status_id;
 
         $this->invoice->client->service()->updateBalance($adjustment)->save();
+
+        $this->invoice->client->service()->calculateBalance();
+
 
         /* Pop the cancellation out of the backup*/
         $backup = $this->invoice->backup;
@@ -103,11 +96,11 @@ class HandleCancellation extends AbstractService
     private function backupCancellation($adjustment)
     {
         if (! is_object($this->invoice->backup)) {
-            $backup = new stdClass;
+            $backup = new stdClass();
             $this->invoice->backup = $backup;
         }
 
-        $cancellation = new stdClass;
+        $cancellation = new stdClass();
         $cancellation->adjustment = $adjustment;
         $cancellation->status_id = $this->invoice->status_id;
 

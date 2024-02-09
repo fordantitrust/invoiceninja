@@ -29,13 +29,19 @@ class UpdateRecurringInvoiceRequest extends Request
      *
      * @return bool
      */
-    public function authorize() : bool
+    public function authorize(): bool
     {
-        return auth()->user()->can('edit', $this->recurring_invoice);
+        /** @var \App\Models\User auth()->user() */
+        $user = auth()->user();
+
+        return $user->can('edit', $this->recurring_invoice);
     }
 
     public function rules()
     {
+        /** @var \App\Models\User auth()->user() */
+        $user = auth()->user();
+
         $rules = [];
 
         if ($this->file('documents') && is_array($this->file('documents'))) {
@@ -50,9 +56,10 @@ class UpdateRecurringInvoiceRequest extends Request
             $rules['file'] = $this->file_validation;
         }
 
-        if ($this->number) {
-            $rules['number'] = Rule::unique('recurring_invoices')->where('company_id', auth()->user()->company()->id)->ignore($this->recurring_invoice->id);
-        }
+        $rules['number'] = ['bail', 'sometimes', Rule::unique('recurring_invoices')->where('company_id', $user->company()->id)->ignore($this->recurring_invoice->id)];
+
+
+        $rules['client_id'] = ['bail', 'sometimes', Rule::in([$this->recurring_invoice->client_id])];
 
         $rules['project_id'] = ['bail', 'sometimes', new ValidProjectForClient($this->all())];
         $rules['tax_rate1'] = 'bail|sometimes|numeric';
@@ -61,7 +68,9 @@ class UpdateRecurringInvoiceRequest extends Request
         $rules['tax_name1'] = 'bail|sometimes|string|nullable';
         $rules['tax_name2'] = 'bail|sometimes|string|nullable';
         $rules['tax_name3'] = 'bail|sometimes|string|nullable';
-        
+        $rules['exchange_rate'] = 'bail|sometimes|numeric';
+        $rules['next_send_date'] = 'bail|required|date|after:yesterday';
+
         return $rules;
     }
 
@@ -71,6 +80,10 @@ class UpdateRecurringInvoiceRequest extends Request
 
         if (array_key_exists('due_date_days', $input) && is_null($input['due_date_days'])) {
             $input['due_date_days'] = 'terms';
+        }
+
+        if(!isset($input['next_send_date']) || $input['next_send_date'] == '') {
+            $input['next_send_date'] = now()->format('Y-m-d');
         }
 
         if (array_key_exists('next_send_date', $input) && is_string($input['next_send_date'])) {
@@ -121,6 +134,10 @@ class UpdateRecurringInvoiceRequest extends Request
             unset($input['documents']);
         }
 
+        if (array_key_exists('exchange_rate', $input) && (is_null($input['exchange_rate']) || $input['exchange_rate'] == 0) || !isset($input['exchange_rate'])) {
+            $input['exchange_rate'] = 1;
+        }
+
         $this->replace($input);
     }
 
@@ -129,11 +146,11 @@ class UpdateRecurringInvoiceRequest extends Request
      * off / optin / optout will reset the status of this field to off to allow
      * the client to choose whether to auto_bill or not.
      *
-     * @param enum $auto_bill off/always/optin/optout
+     * @param string $auto_bill off/always/optin/optout
      *
      * @return bool
      */
-    private function setAutoBillFlag($auto_bill)
+    private function setAutoBillFlag($auto_bill): bool
     {
         if ($auto_bill == 'always' || $auto_bill == 'optout') {
             return true;

@@ -25,7 +25,9 @@ use Illuminate\Support\Facades\App;
 
 class SendVerificationNotification implements ShouldQueue
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
+    use Dispatchable;
+    use InteractsWithSockets;
+    use SerializesModels;
 
     /**
      * Create the event listener.
@@ -47,14 +49,14 @@ class SendVerificationNotification implements ShouldQueue
     {
         MultiDB::setDB($event->company->db);
 
-        $event->user->service()->invite($event->company);
+        $event->user->service()->invite($event->company, $event->is_react);
 
         if (Carbon::parse($event->company->created_at)->lt(now()->subDay())) {
             App::forgetInstance('translator');
             $t = app('translator');
             $t->replace(Ninja::transformTranslations($event->company->settings));
 
-            $nmo = new NinjaMailerObject;
+            $nmo = new NinjaMailerObject();
             $nmo->mailable = new UserAdded($event->company, $event->creating_user, $event->user);
             $nmo->company = $event->company;
             $nmo->settings = $event->company->settings;

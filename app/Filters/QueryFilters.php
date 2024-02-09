@@ -11,7 +11,6 @@
 
 namespace App\Filters;
 
-//use Illuminate\Database\Query\Builder;
 use App\Utils\Traits\MakesHash;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -27,17 +26,17 @@ abstract class QueryFilters
     /**
      * active status.
      */
-    const STATUS_ACTIVE = 'active';
+    public const STATUS_ACTIVE = 'active';
 
     /**
      * archived status.
      */
-    const STATUS_ARCHIVED = 'archived';
+    public const STATUS_ARCHIVED = 'archived';
 
     /**
      * deleted status.
      */
-    const STATUS_DELETED = 'deleted';
+    public const STATUS_DELETED = 'deleted';
 
     /**
      * The request object.
@@ -73,8 +72,8 @@ abstract class QueryFilters
     /**
      * Apply the filters to the builder.
      *
-     * @param  Builder $builder
-     * @return Builder
+     * @param  \Illuminate\Database\Eloquent\Builder $builder
+     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function apply(Builder $builder)
     {
@@ -117,11 +116,11 @@ abstract class QueryFilters
      * @param  string $value
      * @return \stdClass
      */
-    public function split($value) : \stdClass
+    public function split($value): \stdClass
     {
         $exploded_array = explode(':', $value);
 
-        $parts = new \stdClass;
+        $parts = new \stdClass();
 
         $parts->value = $exploded_array[0];
         $parts->operator = $this->operatorConvertor($exploded_array[1]);
@@ -168,7 +167,7 @@ abstract class QueryFilters
      * @param string $operator
      * @return string
      */
-    private function operatorConvertor(string $operator) : string
+    private function operatorConvertor(string $operator): string
     {
         switch ($operator) {
             case 'lt':
@@ -240,7 +239,11 @@ abstract class QueryFilters
         }
     }
 
-
+    /**
+     *
+     * @param string $value
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
     public function is_deleted($value = 'true')
     {
         if ($value == 'true') {
@@ -287,6 +290,31 @@ abstract class QueryFilters
 
         return $this->builder;
     }
+
+    /**
+     * @return Builder
+     */
+    public function without_deleted_clients(): Builder
+    {
+        return $this->builder->where(function ($query) {
+            $query->whereHas('client', function ($sub_query) {
+                $sub_query->where('is_deleted', 0)->where('deleted_at', null);
+            })->orWhere('client_id', null);
+        });
+    }
+
+    /**
+     * @return Builder
+     */
+    public function without_deleted_vendors(): Builder
+    {
+        return $this->builder->where(function ($query) {
+            $query->whereHas('vendor', function ($sub_query) {
+                $sub_query->where('is_deleted', 0)->where('deleted_at', null);
+            })->orWhere('vendor_id', null);
+        });
+    }
+
 
     public function with(string $value = ''): Builder
     {

@@ -12,6 +12,7 @@
 namespace App\Transformers;
 
 use App\Models\CompanyGateway;
+use App\Models\Gateway;
 use App\Models\SystemLog;
 use App\Utils\Traits\MakesHash;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -28,13 +29,13 @@ class CompanyGatewayTransformer extends EntityTransformer
     /**
      * @var array
      */
-    protected $defaultIncludes = [
+    protected array $defaultIncludes = [
     ];
 
     /**
      * @var array
      */
-    protected $availableIncludes = [
+    protected array $availableIncludes = [
         'system_logs',
         'gateway',
     ];
@@ -67,7 +68,7 @@ class CompanyGatewayTransformer extends EntityTransformer
             'show_shipping_address' => (bool) $company_gateway->show_shipping_address, //@deprecated
             'update_details' => (bool) $company_gateway->update_details,
             'config' => (string) $company_gateway->getConfigTransformed(),
-            'fees_and_limits' => $company_gateway->fees_and_limits ?: new stdClass,
+            'fees_and_limits' => $company_gateway->fees_and_limits ?: new stdClass(),
             'updated_at' => (int) $company_gateway->updated_at,
             'archived_at' => (int) $company_gateway->deleted_at,
             'created_at' => (int) $company_gateway->created_at,

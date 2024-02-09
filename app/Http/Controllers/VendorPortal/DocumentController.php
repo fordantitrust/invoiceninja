@@ -53,7 +53,7 @@ class DocumentController extends Controller
     }
 
 
-    private function sidebarMenu() :array
+    private function sidebarMenu(): array
     {
         $enabled_modules = auth()->guard('vendor')->user()->company->enabled_modules;
         $data = [];
@@ -81,6 +81,7 @@ class DocumentController extends Controller
     {
         MultiDB::documentFindAndSetDb($document_hash);
 
+        /** @var \App\Models\Document $document */
         $document = Document::where('hash', $document_hash)->firstOrFail();
 
         $headers = [];
@@ -94,7 +95,8 @@ class DocumentController extends Controller
 
     public function downloadMultiple(DownloadMultipleDocumentsRequest $request)
     {
-        $documents = Document::whereIn('id', $this->transformKeys($request->file_hash))
+        /** @var \Illuminate\Database\Eloquent\Collection<Document> $documents */
+        $documents = Document::query()->whereIn('id', $this->transformKeys($request->file_hash))
             ->where('company_id', auth()->guard('vendor')->user()->company_id)
             ->get();
 

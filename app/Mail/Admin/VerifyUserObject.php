@@ -11,6 +11,8 @@
 
 namespace App\Mail\Admin;
 
+use App\Models\Company;
+use App\Models\User;
 use App\Utils\Ninja;
 use App\Utils\Traits\MakesHash;
 use Illuminate\Support\Facades\App;
@@ -19,14 +21,8 @@ class VerifyUserObject
 {
     use MakesHash;
 
-    public $user;
-
-    public $company;
-
-    public function __construct($user, $company)
+    public function __construct(public User $user, public Company $company, private bool $is_react = false)
     {
-        $this->user = $user;
-        $this->company = $company;
     }
 
     public function build()
@@ -44,21 +40,22 @@ class VerifyUserObject
 
         $react_redirect = '';
 
-        if(Ninja::isHosted()) {
+        if($this->is_react) {
             $react_redirect = '?react=true';
         }
 
         $data = [
             'title' => ctrans('texts.confirmation_subject'),
-            'message' => ctrans('texts.confirmation_message'),
+            'content' => ctrans('texts.confirmation_message'),
             'url' => url("/user/confirm/{$this->user->confirmation_code}".$react_redirect),
             'button' => ctrans('texts.button_confirmation_message'),
             'settings' => $this->company->settings,
             'logo' => $this->company->present()->logo(),
             'signature' => $this->company->settings->email_signature,
+            'text_body' => ctrans('texts.confirmation_message'),
         ];
 
-        $mail_obj = new \stdClass;
+        $mail_obj = new \stdClass();
         $mail_obj->subject = ctrans('texts.confirmation_subject');
         $mail_obj->data = $data;
         $mail_obj->markdown = 'email.admin.generic';

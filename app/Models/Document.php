@@ -11,7 +11,6 @@
 
 namespace App\Models;
 
-use App\Helpers\Document\WithTypeHelpers;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Storage;
 
@@ -56,32 +55,6 @@ use Illuminate\Support\Facades\Storage;
  * @method static \Illuminate\Database\Eloquent\Builder|Document onlyTrashed()
  * @method static \Illuminate\Database\Eloquent\Builder|Document query()
  * @method static \Illuminate\Database\Eloquent\Builder|BaseModel scope()
- * @method static \Illuminate\Database\Eloquent\Builder|Document whereAssignedUserId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Document whereCompanyId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Document whereCreatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Document whereCustomValue1($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Document whereCustomValue2($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Document whereCustomValue3($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Document whereCustomValue4($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Document whereDeletedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Document whereDisk($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Document whereDocumentableId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Document whereDocumentableType($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Document whereHash($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Document whereHeight($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Document whereId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Document whereIsDefault($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Document whereIsPublic($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Document whereName($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Document wherePreview($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Document whereProjectId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Document whereSize($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Document whereType($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Document whereUpdatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Document whereUrl($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Document whereUserId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Document whereVendorId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Document whereWidth($value)
  * @method static \Illuminate\Database\Eloquent\Builder|Document withTrashed()
  * @method static \Illuminate\Database\Eloquent\Builder|Document withoutTrashed()
  * @mixin \Eloquent
@@ -90,9 +63,8 @@ class Document extends BaseModel
 {
     use SoftDeletes;
     use Filterable;
-    use WithTypeHelpers;
 
-    const DOCUMENT_PREVIEW_SIZE = 300; // pixels
+    public const DOCUMENT_PREVIEW_SIZE = 300; // pixels
 
     /**
      * @var array<string>
@@ -101,6 +73,16 @@ class Document extends BaseModel
         'is_default',
         'is_public',
         'name',
+    ];
+
+    /**
+     * @var array<string>
+     */
+    protected $casts = [
+        'is_public' => 'bool',
+        'updated_at' => 'timestamp',
+        'created_at' => 'timestamp',
+        'deleted_at' => 'timestamp',
     ];
 
     /**
@@ -221,4 +203,47 @@ class Document extends BaseModel
     {
         return ctrans('texts.document');
     }
+
+    public function compress(): mixed
+    {
+
+        $image = $this->getFile();
+        $catch_image = $image;
+
+        if(!extension_loaded('imagick')) {
+            return $catch_image;
+        }
+
+        try {
+            $file = base64_encode($image);
+
+            $img = new \Imagick();
+            $img->readImageBlob($file);
+            $img->setImageCompression(true);
+            $img->setImageCompressionQuality(50);
+
+            return $img->getImageBlob();
+
+        } catch(\Exception $e) {
+
+            nlog($e->getMessage());
+            return $catch_image;
+        }
+
+    }
+
+    /**
+     * Returns boolean based on checks for image.
+     *
+     * @return bool
+     */
+    public function isImage(): bool
+    {
+        if (in_array($this->type, ['png', 'jpeg', 'jpg', 'tiff', 'gif'])) {
+            return true;
+        }
+
+        return false;
+    }
+
 }

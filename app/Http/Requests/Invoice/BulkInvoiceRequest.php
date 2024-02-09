@@ -15,7 +15,7 @@ use App\Http\Requests\Request;
 
 class BulkInvoiceRequest extends Request
 {
-    public function authorize() : bool
+    public function authorize(): bool
     {
         return true;
     }
@@ -24,8 +24,12 @@ class BulkInvoiceRequest extends Request
     {
         return [
             'action' => 'required|string',
-            'ids' => 'required',
-            'email_type' => 'sometimes|in:reminder1,reminder2,reminder3,reminder_endless,custom1,custom2,custom3,invoice,quote,credit,payment,payment_partial,statement,purchase_order'
+            'ids' => 'required|array',
+            'email_type' => 'sometimes|in:reminder1,reminder2,reminder3,reminder_endless,custom1,custom2,custom3,invoice,quote,credit,payment,payment_partial,statement,purchase_order',
+            'template' => 'sometimes|string',
+            'template_id' => 'sometimes|string',
+            'send_email' => 'sometimes|bool',
+            'subscriptin_id' => 'sometimes|string',
         ];
     }
 }

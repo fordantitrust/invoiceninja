@@ -142,7 +142,7 @@ class CreditCard
         $cgt['token'] = $data['token'];
         $cgt['payment_method_id'] = GatewayType::CREDIT_CARD;
 
-        $payment_meta = new \stdClass;
+        $payment_meta = new \stdClass();
         $payment_meta->exp_month = 'xx';
         $payment_meta->exp_year = 'xx';
         $payment_meta->brand = 'CC';
@@ -210,6 +210,8 @@ class CreditCard
     public function paymentResponse(Request $request)
     {
         $response_array = $request->all();
+
+        nlog($request->all());
 
         $state = [
             'server_response' => $request->all(),

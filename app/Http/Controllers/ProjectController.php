@@ -13,6 +13,7 @@ namespace App\Http\Controllers;
 
 use App\Factory\ProjectFactory;
 use App\Filters\ProjectFilters;
+use App\Http\Requests\Project\BulkProjectRequest;
 use App\Http\Requests\Project\CreateProjectRequest;
 use App\Http\Requests\Project\DestroyProjectRequest;
 use App\Http\Requests\Project\EditProjectRequest;
@@ -23,6 +24,7 @@ use App\Http\Requests\Project\UploadProjectRequest;
 use App\Models\Account;
 use App\Models\Project;
 use App\Repositories\ProjectRepository;
+use App\Services\Template\TemplateAction;
 use App\Transformers\ProjectTransformer;
 use App\Utils\Traits\GeneratesCounter;
 use App\Utils\Traits\MakesHash;
@@ -264,7 +266,7 @@ class ProjectController extends BaseController
         $project->saveQuietly();
 
         if ($request->has('documents')) {
-            $this->saveDocuments($request->input('documents'), $project);
+            $this->saveDocuments($request->input('documents'), $project, $request->input('is_public', true));
         }
 
         event('eloquent.updated: App\Models\Project', $project);
@@ -312,7 +314,10 @@ class ProjectController extends BaseController
      */
     public function create(CreateProjectRequest $request)
     {
-        $project = ProjectFactory::create(auth()->user()->company()->id, auth()->user()->id);
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        $project = ProjectFactory::create($user->company()->id, $user->id);
 
         return $this->itemResponse($project);
     }
@@ -357,7 +362,10 @@ class ProjectController extends BaseController
      */
     public function store(StoreProjectRequest $request)
     {
-        $project = ProjectFactory::create(auth()->user()->company()->id, auth()->user()->id);
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        $project = ProjectFactory::create($user->company()->id, $user->id);
         $project->fill($request->all());
         $project->saveQuietly();
 
@@ -367,7 +375,7 @@ class ProjectController extends BaseController
         }
 
         if ($request->has('documents')) {
-            $this->saveDocuments($request->input('documents'), $project);
+            $this->saveDocuments($request->input('documents'), $project, $request->input('is_public', true));
         }
 
         event('eloquent.created: App\Models\Project', $project);
@@ -484,16 +492,37 @@ class ProjectController extends BaseController
      *       ),
      *     )
      */
-    public function bulk()
+    public function bulk(BulkProjectRequest $request)
     {
-        $action = request()->input('action');
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
 
-        $ids = request()->input('ids');
+        $action = $request->input('action');
 
-        $projects = Project::withTrashed()->find($this->transformKeys($ids));
+        $ids = $request->input('ids');
 
-        $projects->each(function ($project, $key) use ($action) {
-            if (auth()->user()->can('edit', $project)) {
+        $projects = Project::withTrashed()->whereIn('id', $this->transformKeys($ids))->company()->get();
+
+        if($action == 'template' && $user->can('view', $projects->first())) {
+
+            $hash_or_response = $request->boolean('send_email') ? 'email sent' : \Illuminate\Support\Str::uuid();
+
+            TemplateAction::dispatch(
+                $projects->pluck('hashed_id')->toArray(),
+                $request->template_id,
+                Project::class,
+                $user->id,
+                $user->company(),
+                $user->company()->db,
+                $hash_or_response,
+                $request->boolean('send_email')
+            );
+
+            return response()->json(['message' => $hash_or_response], 200);
+        }
+
+        $projects->each(function ($project) use ($action, $user) {
+            if ($user->can('edit', $project)) {
                 $this->project_repo->{$action}($project);
             }
         });
@@ -504,11 +533,9 @@ class ProjectController extends BaseController
     /**
      * Update the specified resource in storage.
      *
-     * @param UploadProductRequest $request
-     * @param Product $project
+     * @param UploadProjectRequest $request
+     * @param Project $project
      * @return Response
-     *
-     *
      *
      * @OA\Put(
      *      path="/api/v1/projects/{id}/upload",
@@ -558,7 +585,7 @@ class ProjectController extends BaseController
         }
 
         if ($request->has('documents')) {
-            $this->saveDocuments($request->file('documents'), $project);
+            $this->saveDocuments($request->file('documents'), $project, $request->input('is_public', true));
         }
 
         return $this->itemResponse($project->fresh());

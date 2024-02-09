@@ -11,15 +11,10 @@
 
 namespace App\Models;
 
-use App\Events\Invoice\InvoiceWasUpdated;
-use App\Jobs\Entity\CreateEntityPdf;
-use App\Utils\Ninja;
 use App\Utils\Traits\Inviteable;
 use App\Utils\Traits\MakesDates;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * App\Models\InvoiceInvitation
@@ -27,8 +22,8 @@ use Illuminate\Support\Facades\Storage;
  * @property int $id
  * @property int $company_id
  * @property int $user_id
- * @property int $client_contact_id
- * @property int $invoice_id
+ * @property int|null $client_contact_id
+ * @property int|null $invoice_id
  * @property string $key
  * @property string|null $transaction_reference
  * @property string|null $message_id
@@ -43,11 +38,11 @@ use Illuminate\Support\Facades\Storage;
  * @property int|null $deleted_at
  * @property string|null $signature_ip
  * @property string|null $email_status
- * @property-read \App\Models\Company $company
- * @property-read \App\Models\ClientContact $contact
- * @property-read mixed $hashed_id
- * @property-read \App\Models\Invoice $invoice
- * @property-read \App\Models\User $user
+ * @property \App\Models\Company $company
+ * @property \App\Models\ClientContact $contact
+ * @property mixed $hashed_id
+ * @property \App\Models\Invoice $invoice
+ * @property \App\Models\User $user
  * @method static \Illuminate\Database\Eloquent\Builder|BaseModel company()
  * @method static \Illuminate\Database\Eloquent\Builder|BaseModel exclude($columns)
  * @method static \Database\Factories\InvoiceInvitationFactory factory($count = null, $state = [])
@@ -102,47 +97,37 @@ class InvoiceInvitation extends BaseModel
         return self::class;
     }
 
+    public function getEntityString(): string
+    {
+        return 'invoice';
+    }
+    
     public function entityType()
     {
         return Invoice::class;
     }
 
-    /**
-     * @return mixed
-     */
-    public function invoice()
+    public function invoice(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Invoice::class)->withTrashed();
     }
 
-    /**
-     * @return mixed
-     */
-    public function getEntity()
+    public function getEntity(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Invoice::class)->withTrashed();
     }
 
-    /**
-     * @return mixed
-     */
-    public function contact()
+    public function contact(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(ClientContact::class, 'client_contact_id', 'id')->withTrashed();
     }
 
-    /**
-     * @return mixed
-     */
-    public function user()
+    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class)->withTrashed();
     }
 
-    /**
-     * @return BelongsTo
-     */
-    public function company()
+    public function company(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Company::class);
     }
@@ -156,32 +141,21 @@ class InvoiceInvitation extends BaseModel
         return sprintf('<img src="data:image/svg+xml;base64,%s"></img><p/>%s: %s', $this->signature_base64, ctrans('texts.signed'), $this->createClientDate($this->signature_date, $this->contact->client->timezone()->name));
     }
 
-    public function getName()
+    public function getName(): string
     {
         return $this->key;
     }
 
-    public function markViewed()
+    public function markViewed(): void
     {
         $this->viewed_date = Carbon::now();
         $this->save();
     }
 
-    public function markOpened()
+    public function markOpened(): void
     {
         $this->opened_date = Carbon::now();
         $this->save();
     }
 
-    public function pdf_file_path()
-    {
-        $storage_path = Storage::url($this->invoice->client->invoice_filepath($this).$this->invoice->numberFormatter().'.pdf');
-
-        if (! Storage::exists($this->invoice->client->invoice_filepath($this).$this->invoice->numberFormatter().'.pdf')) {
-            event(new InvoiceWasUpdated($this->invoice, $this->company, Ninja::eventVars(auth()->user() ? auth()->user()->id : null)));
-            (new CreateEntityPdf($this))->handle();
-        }
-
-        return $storage_path;
-    }
 }

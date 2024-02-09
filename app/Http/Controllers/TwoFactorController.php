@@ -11,11 +11,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\TwoFactor\EnableTwoFactorRequest;
 use App\Models\User;
+use App\Transformers\UserTransformer;
 use App\Utils\Ninja;
 use PragmaRX\Google2FA\Google2FA;
-use App\Transformers\UserTransformer;
-use App\Http\Requests\TwoFactor\EnableTwoFactorRequest;
 
 class TwoFactorController extends BaseController
 {
@@ -30,10 +30,9 @@ class TwoFactorController extends BaseController
 
         if ($user->google_2fa_secret) {
             return response()->json(['message' => '2FA already enabled'], 400);
-        } elseif(Ninja::isSelfHost()){
+        } elseif(Ninja::isSelfHost()) {
 
-        }
-        elseif (! $user->phone) {
+        } elseif (! $user->phone) {
             return response()->json(['message' => ctrans('texts.set_phone_for_two_factor')], 400);
         } elseif (! $user->isVerified()) {
             return response()->json(['message' => 'Please confirm your account first'], 400);
@@ -60,7 +59,9 @@ class TwoFactorController extends BaseController
     {
         $google2fa = new Google2FA();
 
+        /** @var \App\Models\User $user */
         $user = auth()->user();
+
         $secret = $request->input('secret');
         $oneTimePassword = $request->input('one_time_password');
 
@@ -83,7 +84,10 @@ class TwoFactorController extends BaseController
 
     public function disableTwoFactor()
     {
+        
+        /** @var \App\Models\User $user */
         $user = auth()->user();
+
         $user->google_2fa_secret = null;
         $user->save();
 

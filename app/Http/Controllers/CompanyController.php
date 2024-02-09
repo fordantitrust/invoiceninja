@@ -21,6 +21,7 @@ use App\Http\Requests\Company\ShowCompanyRequest;
 use App\Http\Requests\Company\StoreCompanyRequest;
 use App\Http\Requests\Company\UpdateCompanyRequest;
 use App\Http\Requests\Company\UploadCompanyRequest;
+use App\Jobs\Company\CompanyTaxRate;
 use App\Jobs\Company\CreateCompany;
 use App\Jobs\Company\CreateCompanyPaymentTerms;
 use App\Jobs\Company\CreateCompanyTaskStatuses;
@@ -41,7 +42,6 @@ use App\Utils\Traits\Uploadable;
 use Illuminate\Foundation\Bus\DispatchesJobs;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
-use Str;
 use Turbo124\Beacon\Facades\LightLogs;
 
 /**
@@ -165,7 +165,7 @@ class CompanyController extends BaseController
         /** @var \App\Models\User $user */
         $user = auth()->user();
 
-        $company_factory = new \App\Factory\CompanyFactory;
+        $company_factory = new \App\Factory\CompanyFactory();
 
         $company = $company_factory->create($user->company()->account->id);
 
@@ -423,18 +423,18 @@ class CompanyController extends BaseController
         $company = $this->company_repo->save($request->all(), $company);
 
         if ($request->has('documents')) {
-            $this->saveDocuments($request->input('documents'), $company, false);
+            $this->saveDocuments($request->input('documents'), $company, $request->input('is_public', true));
         }
 
-        if($request->has('e_invoice_certificate') && !is_null($request->file("e_invoice_certificate"))){
+        if($request->has('e_invoice_certificate') && !is_null($request->file("e_invoice_certificate"))) {
 
             $company->e_invoice_certificate = base64_encode($request->file("e_invoice_certificate")->get());
 
             $settings = $company->settings;
             $settings->enable_e_invoice = true;
-            
+
             $company->save();
-            
+
         }
 
         $this->uploadLogo($request->file('company_logo'), $company, $company);
@@ -530,7 +530,7 @@ class CompanyController extends BaseController
 
             $other_company = $company->account->companies->where('id', '!=', $company->id)->first();
 
-            $nmo = new NinjaMailerObject;
+            $nmo = new NinjaMailerObject();
             $nmo->mailable = new CompanyDeleted($company->present()->name, auth()->user(), $company->account, $company->settings);
             $nmo->company = $other_company;
             $nmo->settings = $other_company->settings;
@@ -547,6 +547,8 @@ class CompanyController extends BaseController
 
             //If we are deleting the default companies, we'll need to make a new company the default.
             if ($account->default_company_id == $company_id) {
+
+                /** @var \App\Models\Company $new_default_company **/
                 $new_default_company = Company::whereAccountId($account->id)->first();
                 $account->default_company_id = $new_default_company->id;
                 $account->save();
@@ -560,7 +562,7 @@ class CompanyController extends BaseController
      * Update the specified resource in storage.
      *
      * @param UploadCompanyRequest $request
-     * @param Company $client
+     * @param Company $company
      * @return Response
      *
      *
@@ -613,7 +615,7 @@ class CompanyController extends BaseController
         }
 
         if ($request->has('documents')) {
-            $this->saveDocuments($request->file('documents'), $company);
+            $this->saveDocuments($request->file('documents'), $company, $request->input('is_public', true));
         }
 
         return $this->itemResponse($company->fresh());
@@ -622,7 +624,7 @@ class CompanyController extends BaseController
     /**
      * Update the specified resource in storage.
      *
-     * @param UploadCompanyRequest $request
+     * @param DefaultCompanyRequest $request
      * @param Company $company
      * @return Response
      *
@@ -676,5 +678,36 @@ class CompanyController extends BaseController
         $account->save();
 
         return $this->itemResponse($company->fresh());
+    }
+
+    public function updateOriginTaxData(DefaultCompanyRequest $request, Company $company)
+    {
+
+        if($company->settings->country_id == "840" && !$company?->account->isFreeHostedClient()) {
+            try {
+                (new CompanyTaxRate($company))->handle();
+            } catch(\Exception $e) {
+                return response()->json(['message' => 'There was a problem updating the tax rates. Please try again.'], 400);
+            }
+        } else {
+            return response()->json(['message' => 'Tax configuration not available due to settings / plan restriction.'], 400);
+        }
+
+        return $this->itemResponse($company->fresh());
+    }
+
+    public function logo()
+    {
+
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+        $company = $user->company();
+        $logo = strlen($company->settings->company_logo) > 5 ? $company->settings->company_logo : 'https://pdf.invoicing.co/favicon-v2.png';
+        $headers = ['Content-Disposition' => 'inline'];
+
+        return response()->streamDownload(function () use ($logo) {
+            echo @file_get_contents($logo);
+        }, 'logo.png', $headers);
+
     }
 }

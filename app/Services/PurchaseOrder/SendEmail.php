@@ -11,20 +11,19 @@
 
 namespace App\Services\PurchaseOrder;
 
-use App\Utils\Ninja;
-use App\Models\PurchaseOrder;
-use App\Models\VendorContact;
+use App\Events\PurchaseOrder\PurchaseOrderWasEmailed;
 use App\Jobs\Mail\NinjaMailerJob;
-use App\Mail\VendorTemplateEmail;
-use App\Services\AbstractService;
-use Illuminate\Support\Facades\App;
 use App\Jobs\Mail\NinjaMailerObject;
 use App\Mail\Engine\PurchaseOrderEmailEngine;
-use App\Events\PurchaseOrder\PurchaseOrderWasEmailed;
+use App\Mail\VendorTemplateEmail;
+use App\Models\PurchaseOrder;
+use App\Models\VendorContact;
+use App\Services\AbstractService;
+use App\Utils\Ninja;
+use Illuminate\Support\Facades\App;
 
 class SendEmail extends AbstractService
 {
-
     public function __construct(protected PurchaseOrder $purchase_order, protected ?string $reminder_template = null, protected ?VendorContact $contact = null)
     {
     }
@@ -47,10 +46,10 @@ class SendEmail extends AbstractService
             $invitation->purchase_order->service()->markSent()->save();
 
             $template = 'purchase_order';
-            
+
             $email_builder = (new PurchaseOrderEmailEngine($invitation, $template, null))->build();
 
-            $nmo = new NinjaMailerObject;
+            $nmo = new NinjaMailerObject();
             $nmo->mailable = new VendorTemplateEmail($email_builder, $invitation->contact, $invitation);
             $nmo->company = $this->purchase_order->company;
             $nmo->settings = $this->purchase_order->company->settings;
@@ -69,48 +68,3 @@ class SendEmail extends AbstractService
 
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

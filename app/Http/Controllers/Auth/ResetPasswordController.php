@@ -60,6 +60,7 @@ class ResetPasswordController extends Controller
 
         if (Ninja::isHosted()) {
             MultiDB::findAndSetDbByCompanyKey($request->session()->get('company_key'));
+            /** @var \App\Models\Company $company **/
             $company = Company::where('company_key', $request->session()->get('company_key'))->first();
         }
 
@@ -68,6 +69,7 @@ class ResetPasswordController extends Controller
         } else {
             $account = Account::first();
         }
+
 
         return $this->render('auth.passwords.reset', ['root' => 'themes', 'token' => $token, 'account' => $account, 'email' => $request->email]);
     }
@@ -109,6 +111,10 @@ class ResetPasswordController extends Controller
     {
         auth()->logout();
 
+        if(request()->has('react') || request()->hasHeader('X-React')) {
+            return redirect(config('ninja.react_url').'/#/login');
+        }
+
         return redirect('/');
     }
 
@@ -125,11 +131,11 @@ class ResetPasswordController extends Controller
             return new JsonResponse(['message' => trans($response)], 200);
         }
 
-        if(Ninja::isHosted() &&  $request->hasHeader('X-React')){
-            return redirect('https://app.invoicing.co/#/login');
+        if($request->hasHeader('X-REACT') || $request->has('react')) {
+            return redirect(config('ninja.react_url').'/#/login');
+        } else {
+            return redirect('/#/login');
         }
-        elseif($request->hasHeader('X-React'))
-            return redirect('/#/login');    
 
         return redirect($this->redirectPath())
                             ->with('status', trans($response));

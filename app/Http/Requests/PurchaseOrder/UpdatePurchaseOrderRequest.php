@@ -28,9 +28,12 @@ class UpdatePurchaseOrderRequest extends Request
      *
      * @return bool
      */
-    public function authorize() : bool
+    public function authorize(): bool
     {
-        return auth()->user()->can('edit', $this->purchase_order);
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        return $user->can('edit', $this->purchase_order);
     }
 
     /**
@@ -40,11 +43,13 @@ class UpdatePurchaseOrderRequest extends Request
      */
     public function rules()
     {
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
         $rules = [];
 
-        if ($this->number) {
-            $rules['number'] = Rule::unique('purchase_orders')->where('company_id', auth()->user()->company()->id)->ignore($this->purchase_order->id);
-        }
+        $rules['number'] = ['bail', 'sometimes', 'nullable', Rule::unique('purchase_orders')->where('company_id', $user->company()->id)->ignore($this->purchase_order->id)];
+        $rules['vendor_id'] = ['bail', 'sometimes', Rule::in([$this->purchase_order->vendor_id])];
 
         $rules['line_items'] = 'array';
         $rules['discount'] = 'sometimes|numeric';
@@ -63,6 +68,7 @@ class UpdatePurchaseOrderRequest extends Request
         }
 
         $rules['status_id'] = 'sometimes|integer|in:1,2,3,4,5';
+        $rules['exchange_rate'] = 'bail|sometimes|numeric';
 
         return $rules;
     }
@@ -77,6 +83,10 @@ class UpdatePurchaseOrderRequest extends Request
 
         if (isset($input['line_items']) && is_array($input['line_items'])) {
             $input['line_items'] = isset($input['line_items']) ? $this->cleanItems($input['line_items']) : [];
+        }
+
+        if (array_key_exists('exchange_rate', $input) && is_null($input['exchange_rate'])) {
+            $input['exchange_rate'] = 1;
         }
 
         $this->replace($input);

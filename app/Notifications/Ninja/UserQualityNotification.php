@@ -12,7 +12,6 @@
 namespace App\Notifications\Ninja;
 
 use App\Models\User;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Messages\SlackMessage;
 use Illuminate\Notifications\Notification;
 
@@ -49,7 +48,7 @@ class UserQualityNotification extends Notification
      * Get the mail representation of the notification.
      *
      * @param  mixed  $notifiable
-     * @return MailMessage
+     *
      */
     public function toMail($notifiable)
     {
@@ -73,7 +72,7 @@ class UserQualityNotification extends Notification
         $content = "User Quality notification {$this->user->present()->name()} \n";
         $content .= "Account: {$this->account_key }\n";
 
-        return (new SlackMessage)
+        return (new SlackMessage())
                 ->success()
                 ->from(ctrans('texts.notification_bot'))
                 ->image('https://app.invoiceninja.com/favicon.png')

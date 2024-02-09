@@ -21,19 +21,27 @@ class UpdateTaxRateRequest extends Request
      *
      * @return bool
      */
-    public function authorize() : bool
+    public function authorize(): bool
     {
-        return auth()->user()->isAdmin();
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        return $user->isAdmin();
+
     }
 
     public function rules()
     {
+
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
         $rules = [];
 
-        $rules['rate'] = 'numeric';
+        $rules['rate'] = 'sometimes|numeric';
 
-        if ($this->number) {
-            $rules['number'] = Rule::unique('tax_rates')->where('company_id', auth()->user()->company()->id)->ignore($this->tax_rate->id);
+        if ($this->name) {
+            $rules['name'] = Rule::unique('tax_rates')->where('company_id', $user->company()->id)->ignore($this->tax_rate->id);
         }
 
         return $rules;

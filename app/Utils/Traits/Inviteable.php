@@ -28,7 +28,7 @@ trait Inviteable
      *
      * @return     string  The status.
      */
-    public function getStatus() :string
+    public function getStatus(): string
     {
         $status = '';
 
@@ -60,16 +60,24 @@ trait Inviteable
 
     public function getPaymentQrCode()
     {
+        return htmlentities(
+            sprintf('<div>%s</div>', $this->getPaymentQrCodeRaw())
+        );
+    }
+
+    public function getPaymentQrCodeRaw()
+    {
+
         $renderer = new ImageRenderer(
-            new RendererStyle(200),
+            new RendererStyle(150, margin: 0),
             new SvgImageBackEnd()
         );
         $writer = new Writer($renderer);
 
         $qr = $writer->writeString($this->getPaymentLink(), 'utf-8');
 
-        return "<svg class='pqrcode' viewBox='0 0 200 200' width='200' height='200' x='0' y='0' xmlns='http://www.w3.org/2000/svg'>
-          <rect x='0' y='0' width='100%' height='100%' />{$qr}</svg>";
+            return $qr;
+
     }
 
     public function getUnsubscribeLink()
@@ -77,7 +85,7 @@ trait Inviteable
         if (Ninja::isHosted()) {
             $domain = $this->company->domain();
         } else {
-            $domain = strlen($this->company->portal_domain) > 5 ? $this->company->portal_domain : config('ninja.app_url');
+            $domain = strlen($this->company->portal_domain ?? '') > 5 ? $this->company->portal_domain : config('ninja.app_url');
         }
 
         $entity_type = Str::snake(class_basename($this->entityType()));
@@ -85,14 +93,14 @@ trait Inviteable
         return $domain.'/client/unsubscribe/'.$entity_type.'/'.$this->key;
     }
 
-    public function getLink() :string
+    public function getLink(): string
     {
         $entity_type = Str::snake(class_basename($this->entityType()));
 
         if (Ninja::isHosted()) {
             $domain = $this->company->domain();
         } else {
-            $domain = strlen($this->company->portal_domain) > 5 ? $this->company->portal_domain : config('ninja.app_url');
+            $domain = strlen($this->company->portal_domain ?? '') > 5 ? $this->company->portal_domain : config('ninja.app_url');
         }
 
         switch ($this->company->portal_mode) {
@@ -101,7 +109,6 @@ trait Inviteable
                 break;
             case 'iframe':
                 return $domain.'/client/'.$entity_type.'/'.$this->key;
-                //return $domain . $entity_type .'/'. $this->contact->client->client_hash .'/'. $this->key;
                 break;
             case 'domain':
                 return $domain.'/client/'.$entity_type.'/'.$this->key;
@@ -113,12 +120,12 @@ trait Inviteable
         }
     }
 
-    public function getPortalLink() :string
+    public function getPortalLink(): string
     {
         if (Ninja::isHosted()) {
             $domain = $this->company->domain();
         } else {
-            $domain = strlen($this->company->portal_domain) > 5 ? $this->company->portal_domain : config('ninja.app_url');
+            $domain = strlen($this->company->portal_domain ?? '') > 5 ? $this->company->portal_domain : config('ninja.app_url');
         }
 
         switch ($this->company->portal_mode) {
@@ -127,7 +134,6 @@ trait Inviteable
                 break;
             case 'iframe':
                 return $domain.'/client/';
-                //return $domain . $entity_type .'/'. $this->contact->client->client_hash .'/'. $this->key;
                 break;
             case 'domain':
                 return $domain.'/client/';
@@ -139,7 +145,7 @@ trait Inviteable
         }
     }
 
-    public function getAdminLink($use_react_link = false) :string
+    public function getAdminLink($use_react_link = false): string
     {
         return $use_react_link ? $this->getReactLink() : $this->getLink().'?silent=true';
     }

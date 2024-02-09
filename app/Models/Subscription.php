@@ -47,8 +47,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string|null $recurring_product_ids
  * @property string $name
  * @property int|null $group_id
- * @property string $price
- * @property string $promo_price
+ * @property float $price
+ * @property float $promo_price
  * @property int $registration_required
  * @property int $use_inventory_management
  * @property string|null $optional_product_ids
@@ -57,7 +57,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property-read mixed $hashed_id
  * @property-read \App\Models\GroupSetting|null $group_settings
  * @property-read \App\Models\User $user
- * @method static \Illuminate\Database\Eloquent\Builder|BaseModel company()
  * @method static \Illuminate\Database\Eloquent\Builder|BaseModel exclude($columns)
  * @method static \Database\Factories\SubscriptionFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder|Subscription filter(\App\Filters\QueryFilters $filters)
@@ -66,48 +65,16 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @method static \Illuminate\Database\Eloquent\Builder|Subscription onlyTrashed()
  * @method static \Illuminate\Database\Eloquent\Builder|Subscription query()
  * @method static \Illuminate\Database\Eloquent\Builder|BaseModel scope()
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription whereAllowCancellation($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription whereAllowPlanChanges($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription whereAllowQueryOverrides($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription whereAssignedUserId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription whereAutoBill($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription whereCompanyId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription whereCreatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription whereCurrencyId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription whereDeletedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription whereFrequencyId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription whereGroupId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription whereId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription whereIsAmountDiscount($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription whereIsDeleted($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription whereMaxSeatsLimit($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription whereMinSeatsLimit($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription whereName($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription whereOptionalProductIds($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription whereOptionalRecurringProductIds($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription wherePerSeatEnabled($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription wherePlanMap($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription wherePrice($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription whereProductIds($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription wherePromoCode($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription wherePromoDiscount($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription wherePromoPrice($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription whereRecurringProductIds($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription whereRefundPeriod($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription whereRegistrationRequired($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription whereTrialDuration($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription whereTrialEnabled($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription whereUpdatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription whereUseInventoryManagement($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription whereUserId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Subscription whereWebhookConfiguration($value)
  * @method static \Illuminate\Database\Eloquent\Builder|Subscription withTrashed()
  * @method static \Illuminate\Database\Eloquent\Builder|Subscription withoutTrashed()
+ * @method static \Illuminate\Database\Eloquent\Builder|Subscription with($value)
  * @mixin \Eloquent
  */
 class Subscription extends BaseModel
 {
-    use HasFactory, SoftDeletes, Filterable;
+    use HasFactory;
+    use SoftDeletes;
+    use Filterable;
 
     protected $hidden = [
         'id',

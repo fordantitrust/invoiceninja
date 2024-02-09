@@ -11,13 +11,14 @@
 
 namespace App\Http\Requests\Company;
 
-use App\Http\Requests\Request;
-use App\Http\ValidationRules\Company\ValidCompanyQuantity;
-use App\Http\ValidationRules\Company\ValidSubdomain;
-use App\Http\ValidationRules\ValidSettingsRule;
-use App\Models\Company;
 use App\Utils\Ninja;
+use App\Models\Company;
+use App\Libraries\MultiDB;
+use App\Http\Requests\Request;
 use App\Utils\Traits\MakesHash;
+use App\Http\ValidationRules\ValidSettingsRule;
+use App\Http\ValidationRules\Company\ValidSubdomain;
+use App\Http\ValidationRules\Company\ValidCompanyQuantity;
 
 class StoreCompanyRequest extends Request
 {
@@ -28,9 +29,11 @@ class StoreCompanyRequest extends Request
      *
      * @return bool
      */
-    public function authorize() : bool
+    public function authorize(): bool
     {
-        return auth()->user()->can('create', Company::class);
+        /** @var \App\Models\User auth()->user */
+        $user = auth()->user();
+        return $user->can('create', Company::class);
     }
 
     public function rules()
@@ -47,7 +50,7 @@ class StoreCompanyRequest extends Request
             $rules['portal_domain'] = 'sometimes|url';
         } else {
             if (Ninja::isHosted()) {
-                $rules['subdomain'] = ['nullable', 'regex:/^[a-zA-Z0-9][a-zA-Z0-9.-]+[a-zA-Z0-9]$/', new ValidSubdomain($this->all())];
+                $rules['subdomain'] = ['nullable', 'regex:/^[a-zA-Z0-9][a-zA-Z0-9.-]+[a-zA-Z0-9]$/', new ValidSubdomain()];
             } else {
                 $rules['subdomain'] = 'nullable|alpha_num';
             }
@@ -70,6 +73,10 @@ class StoreCompanyRequest extends Request
 
         if (array_key_exists('portal_domain', $input)) {
             $input['portal_domain'] = rtrim(strtolower($input['portal_domain']), "/");
+        }
+
+        if(Ninja::isHosted() && !isset($input['subdomain'])) {
+            $input['subdomain'] = MultiDB::randomSubdomainGenerator();
         }
 
         $this->replace($input);

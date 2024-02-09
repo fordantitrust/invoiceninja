@@ -24,21 +24,40 @@ class StoreVendorRequest extends Request
      * Determine if the user is authorized to make this request.
      *
      */
-    public function authorize() : bool
+    public function authorize(): bool
     {
-        return auth()->user()->can('create', Vendor::class);
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        return $user->can('create', Vendor::class);
     }
 
     public function rules()
     {
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
         $rules = [];
-        
+
+        $rules['contacts'] = 'bail|array';
         $rules['contacts.*.email'] = 'bail|nullable|distinct|sometimes|email';
+        $rules['contacts.*.password'] = [
+            'bail',
+            'nullable',
+            'sometimes',
+            'string',
+            'min:7',             // must be at least 10 characters in length
+            'regex:/[a-z]/',      // must contain at least one lowercase letter
+            'regex:/[A-Z]/',      // must contain at least one uppercase letter
+            'regex:/[0-9]/',      // must contain at least one digit
+            //'regex:/[@$!%*#?&.]/', // must contain a special character
+        ];
+
 
         if (isset($this->number)) {
-            $rules['number'] = Rule::unique('vendors')->where('company_id', auth()->user()->company()->id);
+            $rules['number'] = Rule::unique('vendors')->where('company_id', $user->company()->id);
         }
-        
+
         $rules['currency_id'] = 'bail|required|exists:currencies,id';
 
         if ($this->file('documents') && is_array($this->file('documents'))) {
@@ -53,15 +72,21 @@ class StoreVendorRequest extends Request
             $rules['file'] = $this->file_validation;
         }
 
+        $rules['language_id'] = 'bail|nullable|sometimes|exists:languages,id';
+        $rules['classification'] = 'bail|sometimes|nullable|in:individual,company,partnership,trust,charity,government,other';
+
         return $rules;
     }
 
     public function prepareForValidation()
     {
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
         $input = $this->all();
 
         if (!array_key_exists('currency_id', $input) || empty($input['currency_id'])) {
-            $input['currency_id'] = auth()->user()->company()->settings->currency_id;
+            $input['currency_id'] = $user->company()->settings->currency_id;
         }
 
         $input = $this->decodePrimaryKeys($input);

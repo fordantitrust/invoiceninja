@@ -23,7 +23,7 @@ class UpdateBankTransactionRequest extends Request
      *
      * @return bool
      */
-    public function authorize() : bool
+    public function authorize(): bool
     {
         return auth()->user()->can('edit', $this->bank_transaction);
     }
@@ -39,14 +39,14 @@ class UpdateBankTransactionRequest extends Request
         if (isset($this->currency_id)) {
             $rules['currency_id'] = 'sometimes|exists:currencies,id';
         }
-        
+
         if (isset($this->vendor_id)) {
             $rules['vendor_id'] = 'bail|required|exists:vendors,id,company_id,'.auth()->user()->company()->id.',is_deleted,0';
         }
 
-        if (isset($this->expense_id)) {
-            $rules['expense_id'] = 'bail|required|exists:expenses,id,company_id,'.auth()->user()->company()->id.',is_deleted,0';
-        }
+        // if (isset($this->expense_id)) {
+        //     $rules['expense_id'] = 'bail|required|exists:expenses,id,company_id,'.auth()->user()->company()->id.',is_deleted,0';
+        // }
 
         $rules['bank_integration_id'] = 'bail|required|exists:bank_integrations,id,company_id,'.auth()->user()->company()->id.',is_deleted,0';
 
@@ -67,9 +67,9 @@ class UpdateBankTransactionRequest extends Request
             $input['vendor_id'] = $this->decodePrimaryKey($input['vendor_id']);
         }
 
-        if (array_key_exists('expense_id', $input) && strlen($input['expense_id']) > 1) {
-            $input['expense_id'] = $this->decodePrimaryKey($input['expense_id']);
-        }
+        // if (array_key_exists('expense_id', $input) && strlen($input['expense_id']) > 1) {
+        //     $input['expense_id'] = $this->decodePrimaryKey($input['expense_id']);
+        // }
 
         if (array_key_exists('ninja_category_id', $input) && strlen($input['ninja_category_id']) > 1) {
             $input['ninja_category_id'] = $this->decodePrimaryKey($input['ninja_category_id']);

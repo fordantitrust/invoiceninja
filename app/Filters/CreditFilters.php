@@ -30,7 +30,7 @@ class CreditFilters extends QueryFilters
      * @param string $value The credit status as seen by the client
      * @return Builder
      */
-    public function credit_status(string $value = ''): Builder
+    public function client_status(string $value = ''): Builder
     {
         if (strlen($value) == 0) {
             return $this->builder;
@@ -47,7 +47,11 @@ class CreditFilters extends QueryFilters
         if (in_array('draft', $status_parameters)) {
             $credit_filters[] = Credit::STATUS_DRAFT;
         }
-        
+
+        if (in_array('sent', $status_parameters)) {
+            $credit_filters[] = Credit::STATUS_SENT;
+        }
+
         if (in_array('partial', $status_parameters)) {
             $credit_filters[] = Credit::STATUS_PARTIAL;
         }
@@ -56,7 +60,7 @@ class CreditFilters extends QueryFilters
             $credit_filters[] = Credit::STATUS_APPLIED;
         }
 
-        if (count($credit_filters) >=1) {
+        if (count($credit_filters) >= 1) {
             $this->builder->whereIn('status_id', $credit_filters);
         }
 
@@ -88,7 +92,27 @@ class CreditFilters extends QueryFilters
                           ->orWhere('credits.custom_value4', 'like', '%'.$filter.'%')
                           ->orWhereHas('client', function ($q) use ($filter) {
                               $q->where('name', 'like', '%'.$filter.'%');
+                          })
+                          ->orWhereHas('client.contacts', function ($q) use ($filter) {
+                              $q->where('first_name', 'like', '%'.$filter.'%')
+                                ->orWhere('last_name', 'like', '%'.$filter.'%')
+                                ->orWhere('email', 'like', '%'.$filter.'%');
                           });
+        });
+    }
+
+    public function applicable(string $value = ''): Builder
+    {
+        if (strlen($value) == 0) {
+            return $this->builder;
+        }
+
+        return $this->builder->where(function ($query) {
+            $query->whereIn('status_id', [Credit::STATUS_SENT, Credit::STATUS_PARTIAL])
+                  ->where('balance', '>', 0)
+                  ->where(function ($q) {
+                      $q->whereNull('due_date')->orWhere('due_date', '>', now());
+                  });
         });
     }
 
@@ -115,7 +139,14 @@ class CreditFilters extends QueryFilters
             return $this->builder;
         }
 
-        return $this->builder->orderBy($sort_col[0], $sort_col[1]);
+        $dir = ($sort_col[1] == 'asc') ? 'asc' : 'desc';
+
+        if ($sort_col[0] == 'client_id') {
+            return $this->builder->orderBy(\App\Models\Client::select('name')
+                    ->whereColumn('clients.id', 'credits.client_id'), $dir);
+        }
+
+        return $this->builder->orderBy($sort_col[0], $dir);
     }
 
     /**
@@ -134,7 +165,7 @@ class CreditFilters extends QueryFilters
             return $this->builder->company();
         }
 
-//            return $this->builder->whereCompanyId(auth()->user()->company()->id);
+        //            return $this->builder->whereCompanyId(auth()->user()->company()->id);
     }
 
     /**

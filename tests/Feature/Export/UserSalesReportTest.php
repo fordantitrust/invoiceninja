@@ -12,7 +12,6 @@
 namespace Tests\Feature\Export;
 
 use App\DataMapper\CompanySettings;
-use App\Export\CSV\ProductSalesExport;
 use App\Factory\InvoiceItemFactory;
 use App\Models\Account;
 use App\Models\Client;
@@ -22,6 +21,8 @@ use App\Models\User;
 use App\Services\Report\UserSalesReport;
 use App\Utils\Traits\MakesHash;
 use Illuminate\Routing\Middleware\ThrottleRequests;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 /**
@@ -44,6 +45,32 @@ class UserSalesReportTest extends TestCase
         );
 
         $this->withoutExceptionHandling();
+
+        /* Warm up the cache !*/
+        $cached_tables = config('ninja.cached_tables');
+
+        $this->artisan('db:seed --force');
+
+        foreach ($cached_tables as $name => $class) {
+            // check that the table exists in case the migration is pending
+            if (! Schema::hasTable((new $class())->getTable())) {
+                continue;
+            }
+            if ($name == 'payment_terms') {
+                $orderBy = 'num_days';
+            } elseif ($name == 'fonts') {
+                $orderBy = 'sort_order';
+            } elseif (in_array($name, ['currencies', 'industries', 'languages', 'countries', 'banks'])) {
+                $orderBy = 'name';
+            } else {
+                $orderBy = 'id';
+            }
+            $tableData = $class::orderBy($orderBy)->get();
+            if ($tableData->count()) {
+                Cache::forever($name, $tableData);
+            }
+        }
+
     }
 
     public $company;

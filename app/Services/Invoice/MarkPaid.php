@@ -52,6 +52,7 @@ class MarkPaid extends AbstractService
                 $this->invoice
                     ->service()
                     ->setExchangeRate()
+                    ->clearPartial()
                     ->updateBalance($this->payable_balance * -1)
                     ->updatePaidToDate($this->payable_balance)
                     ->setStatus(Invoice::STATUS_PAID)
@@ -71,7 +72,7 @@ class MarkPaid extends AbstractService
         $payment->is_manual = true;
 
         if ($this->invoice->company->timezone()) {
-            $payment->date = now()->addSeconds($this->invoice->company->timezone()->utc_offset)->format('Y-m-d');
+            $payment->date = now()->addSeconds($this->invoice->company->utc_offset())->format('Y-m-d');
         }
 
         $payment_type_id = $this->invoice->client->getSetting('payment_type_id');
@@ -83,13 +84,13 @@ class MarkPaid extends AbstractService
         $payment->saveQuietly();
 
         $payment->service()->applyNumber()->save();
-        
+
         /* Create a payment relationship to the invoice entity */
         $payment->invoices()->attach($this->invoice->id, [
             'amount' => $this->payable_balance,
         ]);
 
-        if ($payment->company->getSetting('send_email_on_mark_paid')) {
+        if ($payment->client->getSetting('send_email_on_mark_paid')) {
             $payment->service()->sendEmail();
         }
 
@@ -102,7 +103,7 @@ class MarkPaid extends AbstractService
         $this->invoice
                 ->service()
                 ->applyNumber()
-                ->touchPdf()
+                // ->deletePdf()
                 ->save();
 
         $payment->ledger()
@@ -112,7 +113,7 @@ class MarkPaid extends AbstractService
         $this->invoice
              ->client
              ->service()
-             ->updateBalanceAndPaidToDate($payment->amount*-1, $payment->amount)
+             ->updateBalanceAndPaidToDate($payment->amount * -1, $payment->amount)
              ->save();
 
         $this->invoice = $this->invoice
@@ -125,7 +126,7 @@ class MarkPaid extends AbstractService
         event(new InvoiceWasPaid($this->invoice, $payment, $payment->company, Ninja::eventVars(auth()->user() ? auth()->user()->id : null)));
 
         event('eloquent.updated: App\Models\Invoice', $this->invoice);
-        
+
         return $this->invoice;
     }
 

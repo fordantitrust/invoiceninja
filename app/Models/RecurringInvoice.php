@@ -91,6 +91,7 @@ use Laracasts\Presenter\PresentableTrait;
  * @property-read \App\Models\User|null $assigned_user
  * @property-read \App\Models\Client $client
  * @property-read \App\Models\Company $company
+ * @property \App\Models\RecurringInvoiceInvitation $invitation
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
  * @property-read int|null $documents_count
  * @property-read mixed $hashed_id
@@ -114,67 +115,6 @@ use Laracasts\Presenter\PresentableTrait;
  * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice onlyTrashed()
  * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice query()
  * @method static \Illuminate\Database\Eloquent\Builder|BaseModel scope()
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereAmount($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereAssignedUserId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereAutoBill($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereAutoBillEnabled($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereBackup($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereBalance($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereClientId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereCompanyId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereCreatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereCustomSurcharge1($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereCustomSurcharge2($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereCustomSurcharge3($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereCustomSurcharge4($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereCustomSurchargeTax1($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereCustomSurchargeTax2($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereCustomSurchargeTax3($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereCustomSurchargeTax4($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereCustomValue1($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereCustomValue2($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereCustomValue3($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereCustomValue4($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereDate($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereDeletedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereDesignId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereDiscount($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereDueDate($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereDueDateDays($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereExchangeRate($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereFooter($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereFrequencyId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereIsAmountDiscount($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereIsDeleted($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereLastSentDate($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereLastViewed($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereLineItems($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereNextSendDate($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereNextSendDateClient($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereNumber($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice wherePaidToDate($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice wherePartial($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice wherePartialDueDate($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice wherePoNumber($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice wherePrivateNotes($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereProjectId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice wherePublicNotes($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereRemainingCycles($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereStatusId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereSubscriptionId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereTaxName1($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereTaxName2($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereTaxName3($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereTaxRate1($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereTaxRate2($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereTaxRate3($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereTerms($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereTotalTaxes($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereUpdatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereUserId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereUsesInclusiveTaxes($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereVendorId($value)
  * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice withTrashed()
  * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice withoutTrashed()
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
@@ -183,62 +123,6 @@ use Laracasts\Presenter\PresentableTrait;
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RecurringInvoiceInvitation> $invitations
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Invoice> $invoices
  * @property bool $is_proforma
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Backup> $history
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RecurringInvoiceInvitation> $invitations
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Invoice> $invoices
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringInvoice whereIsProforma($value)
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Backup> $history
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RecurringInvoiceInvitation> $invitations
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Invoice> $invoices
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Backup> $history
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RecurringInvoiceInvitation> $invitations
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Invoice> $invoices
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Backup> $history
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RecurringInvoiceInvitation> $invitations
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Invoice> $invoices
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Backup> $history
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RecurringInvoiceInvitation> $invitations
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Invoice> $invoices
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Backup> $history
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RecurringInvoiceInvitation> $invitations
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Invoice> $invoices
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Backup> $history
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RecurringInvoiceInvitation> $invitations
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Invoice> $invoices
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Backup> $history
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RecurringInvoiceInvitation> $invitations
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Invoice> $invoices
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Backup> $history
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RecurringInvoiceInvitation> $invitations
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Invoice> $invoices
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Backup> $history
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RecurringInvoiceInvitation> $invitations
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Invoice> $invoices
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Backup> $history
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RecurringInvoiceInvitation> $invitations
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Invoice> $invoices
  * @mixin \Eloquent
  */
 class RecurringInvoice extends BaseModel
@@ -255,44 +139,44 @@ class RecurringInvoice extends BaseModel
     /**
      * Invoice Statuses.
      */
-    const STATUS_DRAFT = 1;
+    public const STATUS_DRAFT = 1;
 
-    const STATUS_ACTIVE = 2;
+    public const STATUS_ACTIVE = 2;
 
-    const STATUS_PAUSED = 3;
+    public const STATUS_PAUSED = 3;
 
-    const STATUS_COMPLETED = 4;
+    public const STATUS_COMPLETED = 4;
 
-    const STATUS_PENDING = -1;
+    public const STATUS_PENDING = -1;
 
     /**
      * Invoice Frequencies.
      */
-    const FREQUENCY_DAILY = 1;
+    public const FREQUENCY_DAILY = 1;
 
-    const FREQUENCY_WEEKLY = 2;
+    public const FREQUENCY_WEEKLY = 2;
 
-    const FREQUENCY_TWO_WEEKS = 3;
+    public const FREQUENCY_TWO_WEEKS = 3;
 
-    const FREQUENCY_FOUR_WEEKS = 4;
+    public const FREQUENCY_FOUR_WEEKS = 4;
 
-    const FREQUENCY_MONTHLY = 5;
+    public const FREQUENCY_MONTHLY = 5;
 
-    const FREQUENCY_TWO_MONTHS = 6;
+    public const FREQUENCY_TWO_MONTHS = 6;
 
-    const FREQUENCY_THREE_MONTHS = 7;
+    public const FREQUENCY_THREE_MONTHS = 7;
 
-    const FREQUENCY_FOUR_MONTHS = 8;
+    public const FREQUENCY_FOUR_MONTHS = 8;
 
-    const FREQUENCY_SIX_MONTHS = 9;
+    public const FREQUENCY_SIX_MONTHS = 9;
 
-    const FREQUENCY_ANNUALLY = 10;
+    public const FREQUENCY_ANNUALLY = 10;
 
-    const FREQUENCY_TWO_YEARS = 11;
+    public const FREQUENCY_TWO_YEARS = 11;
 
-    const FREQUENCY_THREE_YEARS = 12;
+    public const FREQUENCY_THREE_YEARS = 12;
 
-    const RECURS_INDEFINITELY = -1;
+    public const RECURS_INDEFINITELY = -1;
 
     protected $fillable = [
         'client_id',
@@ -395,7 +279,7 @@ class RecurringInvoice extends BaseModel
         return $value;
     }
 
-    public function vendor()
+    public function vendor(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Vendor::class);
     }
@@ -410,42 +294,42 @@ class RecurringInvoice extends BaseModel
         return $this->hasManyThrough(Backup::class, Activity::class);
     }
 
-    public function company()
+    public function company(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Company::class);
     }
 
-    public function client()
+    public function client(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Client::class)->withTrashed();
     }
 
-    public function project()
+    public function project(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Project::class)->withTrashed();
     }
 
-    public function user()
+    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class)->withTrashed();
     }
 
-    public function assigned_user()
+    public function assigned_user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_user_id', 'id')->withTrashed();
     }
 
-    public function invoices()
+    public function invoices(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Invoice::class, 'recurring_id', 'id')->withTrashed();
     }
 
-    public function invitations()
+    public function invitations(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(RecurringInvoiceInvitation::class);
     }
 
-    public function documents()
+    public function documents(): \Illuminate\Database\Eloquent\Relations\MorphMany
     {
         return $this->morphMany(Document::class, 'documentable');
     }
@@ -459,7 +343,20 @@ class RecurringInvoice extends BaseModel
         }
     }
 
-    public function nextSendDate() :?Carbon
+    public function calculateStatus()
+    {
+
+        if($this->remaining_cycles == 0) {
+            return self::STATUS_COMPLETED;
+        } elseif ($this->status_id == self::STATUS_ACTIVE && Carbon::parse($this->next_send_date)->isFuture()) {
+            return self::STATUS_PENDING;
+        } else {
+            return $this->status_id;
+        }
+
+    }
+
+    public function nextSendDate(): ?Carbon
     {
         if (! $this->next_send_date_client) {
             return null;
@@ -506,7 +403,7 @@ class RecurringInvoice extends BaseModel
         }
     }
 
-    public function nextSendDateClient() :?Carbon
+    public function nextSendDateClient(): ?Carbon
     {
         if (! $this->next_send_date_client) {
             return null;
@@ -585,7 +482,7 @@ class RecurringInvoice extends BaseModel
         }
     }
 
-    public function remainingCycles() : int
+    public function remainingCycles(): int
     {
         if ($this->remaining_cycles == 0) {
             return 0;
@@ -596,7 +493,7 @@ class RecurringInvoice extends BaseModel
         }
     }
 
-    public function setCompleted() :  void
+    public function setCompleted(): void
     {
         $this->status_id = self::STATUS_COMPLETED;
         $this->next_send_date = null;
@@ -642,7 +539,7 @@ class RecurringInvoice extends BaseModel
         }
     }
 
-    public static function frequencyForKey(int $frequency_id) :string
+    public static function frequencyForKey(int $frequency_id): string
     {
         switch ($frequency_id) {
             case self::FREQUENCY_DAILY:
@@ -751,7 +648,7 @@ class RecurringInvoice extends BaseModel
             case '':
             case '0':
                 return $this->calculateDateFromTerms($date);
-                
+
             case 'on_receipt':
                 return Carbon::parse($date)->copy();
 
@@ -784,7 +681,7 @@ class RecurringInvoice extends BaseModel
      *
      * @return RecurringService
      */
-    public function service() :RecurringService
+    public function service(): RecurringService
     {
         return new RecurringService($this);
     }

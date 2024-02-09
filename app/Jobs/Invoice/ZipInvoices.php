@@ -11,7 +11,6 @@
 
 namespace App\Jobs\Invoice;
 
-use App\Jobs\Entity\CreateEntityPdf;
 use App\Jobs\Mail\NinjaMailerJob;
 use App\Jobs\Mail\NinjaMailerObject;
 use App\Jobs\Util\UnlinkFile;
@@ -28,15 +27,10 @@ use Illuminate\Support\Facades\Storage;
 
 class ZipInvoices implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-
-    public $invoices;
-
-    private $company;
-
-    private $user;
-
-    public $settings;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     public $tries = 1;
 
@@ -47,15 +41,8 @@ class ZipInvoices implements ShouldQueue
      * @deprecated confirm to be deleted
      * Create a new job instance.
      */
-    public function __construct($invoices, Company $company, User $user)
+    public function __construct(public mixed $invoices, public Company $company, public User $user)
     {
-        $this->invoices = $invoices;
-
-        $this->company = $company;
-
-        $this->user = $user;
-
-        $this->settings = $company->settings;
     }
 
     /**
@@ -66,6 +53,7 @@ class ZipInvoices implements ShouldQueue
     public function handle(): void
     {
         MultiDB::setDb($this->company->db);
+        $settings = $this->company->settings;
 
         // create new zip object
         $zipFile = new \PhpZip\ZipFile();
@@ -73,35 +61,27 @@ class ZipInvoices implements ShouldQueue
         $invitation = $this->invoices->first()->invitations->first();
         $path = $this->invoices->first()->client->invoice_filepath($invitation);
 
-        $this->invoices->each(function ($invoice) {
-            (new CreateEntityPdf($invoice->invitations()->first()))->handle();
-            if ($invoice->client->getSetting('enable_e_invoice')){
-                (new CreateEInvoice($invoice, false))->handle();
-            }
-        });
-
         try {
 
+
             foreach ($this->invoices as $invoice) {
-                $file = $invoice->service()->getInvoicePdf();
-                $zip_file_name = basename($file);
-                $zipFile->addFromString($zip_file_name, Storage::get($file));
 
-                if($invoice->client->getSetting('enable_e_invoice')){
-
-                    $xinvoice = $invoice->service()->getEInvoice();
-                    $xinvoice_zip_file_name = basename($xinvoice);
-                    $zipFile->addFromString($xinvoice_zip_file_name, Storage::get($xinvoice));
-
+                if ($invoice->client->getSetting('enable_e_invoice')) {
+                    $xml = $invoice->service()->getEInvoice();
+                    $zipFile->addFromString($invoice->getFileName("xml"), $xml);
                 }
+
+                $file = $invoice->service()->getRawInvoicePdf();
+                $zip_file_name = $invoice->getFileName();
+                $zipFile->addFromString($zip_file_name, $file);
             }
 
             Storage::put($path.$file_name, $zipFile->outputAsString());
 
-            $nmo = new NinjaMailerObject;
+            $nmo = new NinjaMailerObject();
             $nmo->mailable = new DownloadInvoices(Storage::url($path.$file_name), $this->company);
             $nmo->to_user = $this->user;
-            $nmo->settings = $this->settings;
+            $nmo->settings = $settings;
             $nmo->company = $this->company;
 
             NinjaMailerJob::dispatch($nmo);

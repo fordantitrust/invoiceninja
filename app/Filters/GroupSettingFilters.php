@@ -25,7 +25,8 @@ class GroupSettingFilters extends QueryFilters
      * @return Builder
      */
     public function name(string $name = ''): Builder
-    {nlog("filter");
+    {
+
         if (strlen($name) == 0) {
             return $this->builder;
         }
@@ -63,8 +64,10 @@ class GroupSettingFilters extends QueryFilters
         if (!is_array($sort_col) || count($sort_col) != 2) {
             return $this->builder;
         }
-        
-        return $this->builder->orderBy($sort_col[0], $sort_col[1]);
+
+        $dir = ($sort_col[1] == 'asc') ? 'asc' : 'desc';
+
+        return $this->builder->orderBy($sort_col[0], $dir);
     }
 
     /**

@@ -11,13 +11,15 @@
 
 namespace App\Mail\Engine;
 
-use App\Jobs\Entity\CreateRawPdf;
-use App\Models\Account;
-use App\Utils\HtmlEngine;
 use App\Utils\Ninja;
 use App\Utils\Number;
+use App\Models\Account;
+use App\Utils\HtmlEngine;
+use Illuminate\Support\Str;
+use App\Jobs\Entity\CreateRawPdf;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Cache;
 
 class QuoteEmailEngine extends BaseEmailEngine
 {
@@ -68,7 +70,6 @@ class QuoteEmailEngine extends BaseEmailEngine
                     'company' => $this->quote->company->present()->name(),
                     'amount' => Number::formatMoney($this->quote->amount, $this->client),
                 ],
-                null,
                 $this->client->locale()
             );
 
@@ -88,7 +89,6 @@ class QuoteEmailEngine extends BaseEmailEngine
                     'number' => $this->quote->number,
                     'account' => $this->quote->company->present()->name(),
                 ],
-                null,
                 $this->client->locale()
             );
         }
@@ -100,7 +100,6 @@ class QuoteEmailEngine extends BaseEmailEngine
                 'company' => $this->quote->company->present()->name(),
                 'amount' => Number::formatMoney($this->quote->amount, $this->client),
             ],
-            null,
             $this->client->locale()
         )."\n\n".$this->invitation->getLink();
 
@@ -116,7 +115,7 @@ class QuoteEmailEngine extends BaseEmailEngine
             ->setTextBody($text_body);
 
         if ($this->client->getSetting('pdf_email_attachment') !== false && $this->quote->company->account->hasFeature(Account::FEATURE_PDF_ATTACHMENT)) {
-            $pdf = ((new CreateRawPdf($this->invitation, $this->invitation->company->db))->handle());
+            $pdf = ((new CreateRawPdf($this->invitation))->handle());
 
             $this->setAttachments([['file' => base64_encode($pdf), 'name' => $this->quote->numberFormatter().'.pdf']]);
         }
@@ -124,21 +123,29 @@ class QuoteEmailEngine extends BaseEmailEngine
         //attach third party documents
         if ($this->client->getSetting('document_email_attachment') !== false && $this->quote->company->account->hasFeature(Account::FEATURE_DOCUMENTS)) {
             // Storage::url
-            foreach ($this->quote->documents as $document) {
+            $this->quote->documents()->where('is_public', true)->cursor()->each(function ($document) {
                 if ($document->size > $this->max_attachment_size) {
-                    $this->setAttachmentLinks(["<a class='doc_links' href='" . URL::signedRoute('documents.public_download', ['document_hash' => $document->hash]) ."'>". $document->name ."</a>"]);
-                } else {
-                    $this->setAttachments([['file' => base64_encode($document->getFile()), 'path' => $document->filePath(), 'name' => $document->name, 'mime' => null, ]]);
-                }
-            }
+                    
+                    $hash = Str::random(64);
+                    Cache::put($hash, ['db' => $this->quote->company->db, 'doc_hash' => $document->hash], now()->addDays(7));
 
-            foreach ($this->quote->company->documents as $document) {
-                if ($document->size > $this->max_attachment_size) {
-                    $this->setAttachmentLinks(["<a class='doc_links' href='" . URL::signedRoute('documents.public_download', ['document_hash' => $document->hash]) ."'>". $document->name ."</a>"]);
+                    $this->setAttachmentLinks(["<a class='doc_links' href='" . URL::signedRoute('documents.hashed_download', ['hash' => $hash]) ."'>". $document->name ."</a>"]);
                 } else {
                     $this->setAttachments([['file' => base64_encode($document->getFile()), 'path' => $document->filePath(), 'name' => $document->name, 'mime' => null, ]]);
                 }
-            }
+            });
+
+            $this->quote->company->documents()->where('is_public', true)->cursor()->each(function ($document) {
+                if ($document->size > $this->max_attachment_size) {
+                    
+                    $hash = Str::random(64);
+                    Cache::put($hash, ['db' => $this->quote->company->db, 'doc_hash' => $document->hash], now()->addDays(7));
+
+                    $this->setAttachmentLinks(["<a class='doc_links' href='" . URL::signedRoute('documents.hashed_download', ['hash' => $hash]) ."'>". $document->name ."</a>"]);
+                } else {
+                    $this->setAttachments([['file' => base64_encode($document->getFile()), 'path' => $document->filePath(), 'name' => $document->name, 'mime' => null, ]]);
+                }
+            });
         }
 
         return $this;

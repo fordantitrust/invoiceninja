@@ -26,9 +26,12 @@ class StoreCompanyGatewayRequest extends Request
      *
      * @return bool
      */
-    public function authorize() : bool
+    public function authorize(): bool
     {
-        return auth()->user()->isAdmin();
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        return $user->isAdmin();
     }
 
     public function rules()
@@ -64,6 +67,7 @@ class StoreCompanyGatewayRequest extends Request
             if (isset($input['fees_and_limits'])) {
                 $input['fees_and_limits'] = $this->cleanFeesAndLimits($input['fees_and_limits']);
             }
+
         }
 
         $this->replace($input);

@@ -38,7 +38,7 @@ class ConnectedAccountController extends BaseController
      * Connect an OAuth account to a regular email/password combination account
      *
      * @param Request $request
-     * @return User Refresh Feed.
+     * @return \Illuminate\Http\JsonResponse
      *
      *
      * @OA\Post(
@@ -90,21 +90,22 @@ class ConnectedAccountController extends BaseController
 
     private function handleMicrosoftOauth($request)
     {
-        nlog($request->all());
+        $access_token = false;
+        $access_token = $request->has('access_token') ? $request->input('access_token') : $request->input('accessToken');
 
-        if (!$request->has('access_token')) {
+        if (!$access_token) {
             return response()->json(['message' => 'No access_token parameter found!'], 400);
         }
 
         $graph = new \Microsoft\Graph\Graph();
-        $graph->setAccessToken($request->input('access_token'));
+        $graph->setAccessToken($access_token);
 
         $user = $graph->createRequest("GET", "/me")
                       ->setReturnType(Model\User::class)
                       ->execute();
 
         if ($user) {
-            $email = $user->getMail() ?: $user->getUserPrincipalName();
+            $email = $user->getUserPrincipalName() ?? false;
 
             nlog("microsoft");
             nlog($email);
@@ -117,15 +118,19 @@ class ConnectedAccountController extends BaseController
                 'email' => $email,
                 'oauth_user_id' => $user->getId(),
                 'oauth_provider_id' => 'microsoft',
-                'email_verified_at' =>now()
+                'email_verified_at' => now()
             ];
 
-            auth()->user()->update($connected_account);
-            auth()->user()->email_verified_at = now();
-            auth()->user()->save();
             
+            /** @var \App\Models\User $user */
+            $user = auth()->user();
+
+            $user->update($connected_account);
+            $user->email_verified_at = now();
+            $user->save();
+
             $this->setLoginCache(auth()->user());
-            
+
             return $this->itemResponse(auth()->user());
         }
 
@@ -161,7 +166,7 @@ class ConnectedAccountController extends BaseController
                 'email' => $email,
                 'oauth_user_id' => $google->harvestSubField($user),
                 'oauth_provider_id' => 'google',
-                'email_verified_at' =>now(),
+                'email_verified_at' => now(),
             ];
 
             auth()->user()->update($connected_account);

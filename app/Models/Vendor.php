@@ -13,6 +13,7 @@ namespace App\Models;
 
 use App\DataMapper\CompanySettings;
 use App\Models\Presenters\VendorPresenter;
+use App\Services\Vendor\VendorService;
 use App\Utils\Traits\AppSetup;
 use App\Utils\Traits\GeneratesCounter;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -51,6 +52,8 @@ use Laracasts\Presenter\PresentableTrait;
  * @property string|null $vendor_hash
  * @property string|null $public_notes
  * @property string|null $id_number
+ * @property string|null $language_id
+ * @property int|null $last_login
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
  * @property-read int|null $activities_count
  * @property-read \App\Models\User|null $assigned_user
@@ -64,7 +67,6 @@ use Laracasts\Presenter\PresentableTrait;
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\VendorContact> $primary_contact
  * @property-read int|null $primary_contact_count
  * @property-read \App\Models\User $user
- * @method static \Illuminate\Database\Eloquent\Builder|BaseModel company()
  * @method static \Illuminate\Database\Eloquent\Builder|BaseModel exclude($columns)
  * @method static \Database\Factories\VendorFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder|Vendor filter(\App\Filters\QueryFilters $filters)
@@ -73,81 +75,8 @@ use Laracasts\Presenter\PresentableTrait;
  * @method static \Illuminate\Database\Eloquent\Builder|Vendor onlyTrashed()
  * @method static \Illuminate\Database\Eloquent\Builder|Vendor query()
  * @method static \Illuminate\Database\Eloquent\Builder|BaseModel scope()
- * @method static \Illuminate\Database\Eloquent\Builder|Vendor whereAddress1($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Vendor whereAddress2($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Vendor whereAssignedUserId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Vendor whereCity($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Vendor whereCompanyId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Vendor whereCountryId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Vendor whereCreatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Vendor whereCurrencyId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Vendor whereCustomValue1($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Vendor whereCustomValue2($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Vendor whereCustomValue3($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Vendor whereCustomValue4($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Vendor whereDeletedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Vendor whereId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Vendor whereIdNumber($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Vendor whereIsDeleted($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Vendor whereName($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Vendor whereNumber($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Vendor wherePhone($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Vendor wherePostalCode($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Vendor wherePrivateNotes($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Vendor wherePublicNotes($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Vendor whereState($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Vendor whereTransactionName($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Vendor whereUpdatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Vendor whereUserId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Vendor whereVatNumber($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Vendor whereVendorHash($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Vendor whereWebsite($value)
  * @method static \Illuminate\Database\Eloquent\Builder|Vendor withTrashed()
  * @method static \Illuminate\Database\Eloquent\Builder|Vendor withoutTrashed()
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\VendorContact> $contacts
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\VendorContact> $primary_contact
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\VendorContact> $contacts
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\VendorContact> $primary_contact
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\VendorContact> $contacts
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\VendorContact> $primary_contact
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\VendorContact> $contacts
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\VendorContact> $primary_contact
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\VendorContact> $contacts
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\VendorContact> $primary_contact
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\VendorContact> $contacts
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\VendorContact> $primary_contact
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\VendorContact> $contacts
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\VendorContact> $primary_contact
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\VendorContact> $contacts
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\VendorContact> $primary_contact
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\VendorContact> $contacts
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\VendorContact> $primary_contact
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\VendorContact> $contacts
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\VendorContact> $primary_contact
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\VendorContact> $contacts
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\VendorContact> $primary_contact
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\VendorContact> $contacts
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
@@ -184,6 +113,8 @@ class Vendor extends BaseModel
         'custom_value3',
         'custom_value4',
         'number',
+        'language_id',
+        'classification',
     ];
 
     protected $casts = [
@@ -193,6 +124,7 @@ class Vendor extends BaseModel
         'updated_at' => 'timestamp',
         'created_at' => 'timestamp',
         'deleted_at' => 'timestamp',
+        'last_login' => 'timestamp',
     ];
 
     protected $touches = [];
@@ -208,27 +140,27 @@ class Vendor extends BaseModel
         return self::class;
     }
 
-    public function primary_contact()
+    public function primary_contact(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(VendorContact::class)->where('is_primary', true);
     }
 
-    public function documents()
+    public function documents(): \Illuminate\Database\Eloquent\Relations\MorphMany
     {
         return $this->morphMany(Document::class, 'documentable');
     }
 
-    public function assigned_user()
+    public function assigned_user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_user_id', 'id')->withTrashed();
     }
 
-    public function contacts()
+    public function contacts(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(VendorContact::class)->orderBy('is_primary', 'desc');
     }
 
-    public function activities()
+    public function activities(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Activity::class);
     }
@@ -255,22 +187,25 @@ class Vendor extends BaseModel
         return $this->company->timezone();
     }
 
-    public function company()
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function company(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Company::class);
     }
 
-    public function user()
+    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class)->withTrashed();
     }
 
-    public function translate_entity()
+    public function translate_entity(): string
     {
         return ctrans('texts.vendor');
     }
 
-    public function setCompanyDefaults($data, $entity_name) :array
+    public function setCompanyDefaults($data, $entity_name): array
     {
         $defaults = [];
 
@@ -293,7 +228,13 @@ class Vendor extends BaseModel
         return $defaults;
     }
 
-    public function getSetting($setting)
+    /**
+     * Returns a vendor settings proxying company setting
+     *
+     * @param string $setting
+     * @return mixed
+     */
+    public function getSetting($setting): mixed
     {
         if ((property_exists($this->company->settings, $setting) != false) && (isset($this->company->settings->{$setting}) !== false)) {
             return $this->company->settings->{$setting};
@@ -304,30 +245,45 @@ class Vendor extends BaseModel
         return '';
     }
 
-    public function getMergedSettings() :object
+    public function getMergedSettings(): object
     {
         return $this->company->settings;
     }
 
-    public function purchase_order_filepath($invitation)
+    public function purchase_order_filepath($invitation): string
     {
         $contact_key = $invitation->contact->contact_key;
 
         return $this->company->company_key.'/'.$this->vendor_hash.'/'.$contact_key.'/purchase_orders/';
     }
 
-    public function locale()
+    public function locale(): string
     {
-        return $this->company->locale();
+        return $this->language ? $this->language->locale : $this->company->locale();
     }
 
-    public function country()
+    public function language(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Language::class);
+    }
+
+    public function country(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Country::class);
     }
 
-    public function date_format()
+    public function date_format(): string
     {
         return $this->company->date_format();
+    }
+
+    public function backup_path(): string
+    {
+        return $this->company->company_key.'/'.$this->vendor_hash.'/backups';
+    }
+
+    public function service()
+    {
+        return new VendorService($this);
     }
 }

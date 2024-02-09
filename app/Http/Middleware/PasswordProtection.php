@@ -34,16 +34,17 @@ class PasswordProtection
     {
         $error = [
             'message' => 'Invalid Password',
-            'errors' => new stdClass,
+            'errors' => new stdClass(),
         ];
 
-        /** @var \App\Models\User auth()->user() */        
-        $timeout = auth()->user()->company()->default_password_timeout;
+        /** @var \App\Models\User auth()->user() */
+        $user = auth()->user();
+        $timeout = $user->company()->default_password_timeout;
 
         if ($timeout == 0) {
-            $timeout = 30*60*1000*1000;
+            $timeout = 30 * 60 * 1000 * 1000;
         } else {
-            $timeout = $timeout/1000;
+            $timeout = $timeout / 1000;
         }
 
         //test if password if base64 encoded
@@ -58,11 +59,9 @@ class PasswordProtection
             Cache::put(auth()->user()->hashed_id.'_'.auth()->user()->account_id.'_logged_in', Str::random(64), $timeout);
 
             return $next($request);
-        } 
-        elseif(strlen(auth()->user()->oauth_provider_id) > 2 && !auth()->user()->company()->oauth_password_required){
+        } elseif(strlen(auth()->user()->oauth_provider_id) > 2 && !auth()->user()->company()->oauth_password_required) {
             return $next($request);
-        }
-        elseif ($request->header('X-API-OAUTH-PASSWORD') && strlen($request->header('X-API-OAUTH-PASSWORD')) >=1) {
+        } elseif ($request->header('X-API-OAUTH-PASSWORD') && strlen($request->header('X-API-OAUTH-PASSWORD')) >= 1) {
             //user is attempting to reauth with OAuth - check the token value
             //todo expand this to include all OAuth providers
             if (auth()->user()->oauth_provider_id == 'google') {
@@ -73,7 +72,7 @@ class PasswordProtection
                 if (is_array($user)) {
                     $query = [
                         'oauth_user_id' => $google->harvestSubField($user),
-                        'oauth_provider_id'=> 'google'
+                        'oauth_provider_id' => 'google'
                     ];
 
                     //If OAuth and user also has a password set  - check both

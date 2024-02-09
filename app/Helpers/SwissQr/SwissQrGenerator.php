@@ -57,7 +57,7 @@ class SwissQrGenerator
         // - with specified amount
         // - with human-readable additional information
         // - using your QR-IBAN
-    //
+        //
         // Likely the most common use-case in the business world.
 
         // Create a new instance of QrBill, containing default headers with fixed values
@@ -83,7 +83,7 @@ class SwissQrGenerator
 
         // Add debtor information
         // Who has to pay the invoice? This part is optional.
-    //
+        //
         // Notice how you can use two different styles of addresses: CombinedAddress or StructuredAddress
         // They are interchangeable for creditor as well as debtor.
         $qrBill->setUltimateDebtor(
@@ -108,20 +108,20 @@ class SwissQrGenerator
 
         // Add payment reference
         // This is what you will need to identify incoming payments.
-        
+
         if (stripos($this->invoice->number, "Live") === 0) {
             // we're currently in preview status. Let's give a dummy reference for now
             $invoice_number = "123456789";
         } else {
             $tempInvoiceNumber = $this->invoice->number;
             $tempInvoiceNumber = preg_replace('/[^A-Za-z0-9]/', '', $tempInvoiceNumber);
-            $tempInvoiceNumber = substr($tempInvoiceNumber, 1);
-        
+            // $tempInvoiceNumber = substr($tempInvoiceNumber, 1);
+
             $calcInvoiceNumber = "";
             $array = str_split($tempInvoiceNumber);
             foreach ($array as $char) {
                 if (is_numeric($char)) {
-                //
+                    //
                 } else {
                     if ($char) {
                         $char = strtolower($char);
@@ -132,7 +132,7 @@ class SwissQrGenerator
                 }
                 $calcInvoiceNumber .= $char;
             }
-       
+
             $invoice_number = $calcInvoiceNumber;
         }
 
@@ -166,7 +166,7 @@ class SwissQrGenerator
 
         // Now get the QR code image and save it as a file.
         try {
-            $output = new QrBill\PaymentPart\Output\HtmlOutput\HtmlOutput($qrBill, $this->client->locale() ?: 'en');
+            $output = new QrBill\PaymentPart\Output\HtmlOutput\HtmlOutput($qrBill, $this->resolveLanguage());
 
             $html = $output
                 ->setPrintable(false)
@@ -174,15 +174,44 @@ class SwissQrGenerator
 
             return $html;
         } catch (\Exception $e) {
-            foreach ($qrBill->getViolations() as $key => $violation) {
-                nlog("qr");
-                nlog($violation);
+
+            if(is_iterable($qrBill->getViolations())) {
+
+                foreach ($qrBill->getViolations() as $key => $violation) {
+                    nlog("qr");
+                    nlog($violation);
+                }
+
             }
 
             nlog($e->getMessage());
-            
+
             return '';
             // return $e->getMessage();
         }
     }
+
+    private function resolveLanguage(): string
+    {
+        $language = $this->client->locale() ?: 'en';
+
+        switch ($language) {
+            case 'de':
+                return 'de';
+            case 'en':
+            case 'en_GB':
+                return 'en';
+            case 'it':
+                return 'it';
+            case 'fr':
+            case 'fr_CA':
+            case 'fr_CH':
+                return 'fr';
+
+            default:
+                return 'en';
+        }
+
+    }
+
 }

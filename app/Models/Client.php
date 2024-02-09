@@ -14,6 +14,7 @@ namespace App\Models;
 use App\DataMapper\ClientSettings;
 use App\DataMapper\CompanySettings;
 use App\DataMapper\FeesAndLimits;
+use App\Libraries\Currency\Conversion\CurrencyApi;
 use App\Models\Presenters\ClientPresenter;
 use App\Models\Traits\Excludable;
 use App\Services\Client\ClientService;
@@ -23,6 +24,8 @@ use App\Utils\Traits\GeneratesCounter;
 use App\Utils\Traits\MakesDates;
 use App\Utils\Traits\MakesHash;
 use Illuminate\Contracts\Translation\HasLocalePreference;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Cache;
 use Laracasts\Presenter\PresentableTrait;
@@ -42,9 +45,9 @@ use Laracasts\Presenter\PresentableTrait;
  * @property string|null $logo
  * @property string|null $phone
  * @property string|null $routing_id
- * @property string $balance
- * @property string $paid_to_date
- * @property string $credit_balance
+ * @property float $balance
+ * @property float $paid_to_date
+ * @property float $credit_balance
  * @property int|null $last_login
  * @property int|null $industry_id
  * @property int|null $size_id
@@ -53,7 +56,7 @@ use Laracasts\Presenter\PresentableTrait;
  * @property string|null $city
  * @property string|null $state
  * @property string|null $postal_code
- * @property string|null $country_id
+ * @property int|null $country_id
  * @property string|null $custom_value1
  * @property string|null $custom_value2
  * @property string|null $custom_value3
@@ -65,6 +68,7 @@ use Laracasts\Presenter\PresentableTrait;
  * @property string|null $shipping_postal_code
  * @property int|null $shipping_country_id
  * @property object|null $settings
+ * @property object|null $group_settings
  * @property bool $is_deleted
  * @property int|null $group_settings_id
  * @property string|null $vat_number
@@ -73,128 +77,38 @@ use Laracasts\Presenter\PresentableTrait;
  * @property int|null $updated_at
  * @property int|null $deleted_at
  * @property string|null $id_number
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read int|null $activities_count
- * @property-read \App\Models\User|null $assigned_user
- * @property-read \App\Models\Company $company
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\CompanyLedger> $company_ledger
- * @property-read int|null $company_ledger_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ClientContact> $contacts
- * @property-read int|null $contacts_count
- * @property-read \App\Models\Country|null $country
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Credit> $credits
- * @property-read int|null $credits_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read int|null $documents_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Expense> $expenses
- * @property-read int|null $expenses_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ClientGatewayToken> $gateway_tokens
- * @property-read int|null $gateway_tokens_count
  * @property-read mixed $hashed_id
- * @property-read \App\Models\GroupSetting|null $group_settings
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Invoice> $invoices
- * @property-read int|null $invoices_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\CompanyLedger> $ledger
- * @property-read int|null $ledger_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Payment> $payments
- * @property-read int|null $payments_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ClientContact> $primary_contact
- * @property-read int|null $primary_contact_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Project> $projects
- * @property-read int|null $projects_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Quote> $quotes
- * @property-read int|null $quotes_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RecurringExpense> $recurring_expenses
- * @property-read int|null $recurring_expenses_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RecurringInvoice> $recurring_invoices
- * @property-read int|null $recurring_invoices_count
- * @property-read \App\Models\Country|null $shipping_country
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\SystemLog> $system_logs
- * @property-read int|null $system_logs_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Task> $tasks
- * @property-read int|null $tasks_count
+ * @property-read \App\Models\User|null $assigned_user
  * @property-read \App\Models\User $user
- * @method static \Illuminate\Database\Eloquent\Builder|BaseModel company()
+ * @property-read \App\Models\Company $company
+ * @property-read \App\Models\Country|null $country
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\CompanyLedger> $company_ledger
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ClientContact> $contacts
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Credit> $credits
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Expense> $expenses
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ClientGatewayToken> $gateway_tokens
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Invoice> $invoices
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\CompanyLedger> $ledger
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Payment> $payments
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ClientContact> $primary_contact
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Project> $projects
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Quote> $quotes
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RecurringExpense> $recurring_expenses
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RecurringInvoice> $recurring_invoices
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\SystemLog> $system_logs
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Task> $tasks
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RecurringInvoice> $recurring_invoices
  * @method static \Illuminate\Database\Eloquent\Builder|Client exclude($columns)
  * @method static \Database\Factories\ClientFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder|Client filter(\App\Filters\QueryFilters $filters)
- * @method static \Illuminate\Database\Eloquent\Builder|Client newModelQuery()
- * @method static \Illuminate\Database\Eloquent\Builder|Client newQuery()
- * @method static \Illuminate\Database\Eloquent\Builder|Client onlyTrashed()
- * @method static \Illuminate\Database\Eloquent\Builder|Client query()
- * @method static \Illuminate\Database\Eloquent\Builder|BaseModel scope()
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereAddress1($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereAddress2($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereAssignedUserId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereBalance($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereCity($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereClientHash($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereCompanyId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereCountryId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereCreatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereCreditBalance($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereCustomValue1($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereCustomValue2($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereCustomValue3($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereCustomValue4($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereDeletedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereGroupSettingsId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereIdNumber($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereIndustryId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereIsDeleted($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereLastLogin($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereLogo($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereName($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereNumber($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client wherePaidToDate($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client wherePhone($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client wherePostalCode($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client wherePrivateNotes($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client wherePublicNotes($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereSettings($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereShippingAddress1($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereShippingAddress2($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereShippingCity($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereShippingCountryId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereShippingPostalCode($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereShippingState($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereSizeId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereState($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereUpdatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereUserId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereVatNumber($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereWebsite($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Client withTrashed()
- * @method static \Illuminate\Database\Eloquent\Builder|Client withoutTrashed()
- * @method static \Illuminate\Database\Eloquent\Builder|Client with()
- * @method static \Illuminate\Database\Eloquent\Builder|Client where()
+ * @method static \Illuminate\Database\Eloquent\Builder|Client without()
+ * @method static \Illuminate\Database\Eloquent\Builder|Client find()
+ * @method static \Illuminate\Database\Eloquent\Builder|Client select()
  * @property string $payment_balance
- * @method static \Illuminate\Database\Eloquent\Builder|Client wherePaymentBalance($value)
  * @property mixed $tax_data
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereTaxData($value)
  * @property int $is_tax_exempt
- * @method static \Illuminate\Database\Eloquent\Builder|Client whereIsTaxExempt($value)
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\CompanyLedger> $company_ledger
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ClientContact> $contacts
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Credit> $credits
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Expense> $expenses
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\GroupSetting> $group_settings
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ClientGatewayToken> $gateway_tokens
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Invoice> $invoices
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\CompanyLedger> $ledger
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Payment> $payments
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ClientContact> $primary_contact
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Project> $projects
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Quote> $quotes
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RecurringExpense> $recurring_expenses
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RecurringInvoice> $recurring_invoices
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\SystemLog> $system_logs
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Task> $tasks
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\CompanyLedger> $company_ledger
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ClientContact> $contacts
  * @property int $has_valid_vat_number
  * @mixin \Eloquent
  */
@@ -253,6 +167,7 @@ class Client extends BaseModel implements HasLocalePreference
         'routing_id',
         'is_tax_exempt',
         'has_valid_vat_number',
+        'classification',
     ];
 
     protected $with = [
@@ -317,27 +232,30 @@ class Client extends BaseModel implements HasLocalePreference
         return self::class;
     }
 
-    public function ledger()
+    public function ledger(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(CompanyLedger::class)->orderBy('id', 'desc');
     }
 
-    public function company_ledger()
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\MorphMany<CompanyLedger>
+     */
+    public function company_ledger(): \Illuminate\Database\Eloquent\Relations\MorphMany
     {
         return $this->morphMany(CompanyLedger::class, 'company_ledgerable');
     }
 
-    public function gateway_tokens()
+    public function gateway_tokens(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(ClientGatewayToken::class)->orderBy('is_default', 'DESC');
     }
 
-    public function expenses()
+    public function expenses(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Expense::class)->withTrashed();
     }
 
-    public function projects()
+    public function projects(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Project::class)->withTrashed();
     }
@@ -361,87 +279,92 @@ class Client extends BaseModel implements HasLocalePreference
                     ->first();
     }
 
-    public function credits()
+    public function credits(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Credit::class)->withTrashed();
     }
 
-    public function activities()
+    public function purgeable_activities(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Activity::class);
+    }
+
+    public function activities(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Activity::class)->take(50)->orderBy('id', 'desc');
     }
 
-    public function contacts()
+    public function contacts(): HasMany
     {
         return $this->hasMany(ClientContact::class)->orderBy('is_primary', 'desc');
     }
 
-    public function primary_contact()
+    public function primary_contact(): HasMany
     {
         return $this->hasMany(ClientContact::class)->where('is_primary', true);
     }
 
-    public function company()
+    public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
     }
 
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class)->withTrashed();
     }
 
-    public function assigned_user()
+    public function assigned_user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_user_id', 'id')->withTrashed();
     }
 
-    public function country()
+    public function country(): BelongsTo
     {
         return $this->belongsTo(Country::class);
     }
 
-    public function invoices()
+    public function invoices(): HasMany
     {
         return $this->hasMany(Invoice::class)->withTrashed();
     }
 
-    public function quotes()
+    public function quotes(): HasMany
     {
         return $this->hasMany(Quote::class)->withTrashed();
     }
 
-    public function tasks()
+    public function tasks(): HasMany
     {
         return $this->hasMany(Task::class)->withTrashed();
     }
 
-    public function payments()
+    public function payments(): HasMany
     {
         return $this->hasMany(Payment::class)->withTrashed();
     }
 
-    public function recurring_invoices()
+    public function recurring_invoices(): HasMany
     {
         return $this->hasMany(RecurringInvoice::class)->withTrashed();
     }
 
-    public function recurring_expenses()
+    public function recurring_expenses(): HasMany
     {
         return $this->hasMany(RecurringExpense::class)->withTrashed();
     }
 
-    public function shipping_country()
+    public function shipping_country(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Country::class, 'shipping_country_id', 'id');
     }
 
-    public function system_logs()
+    public function system_logs(): HasMany
     {
         return $this->hasMany(SystemLog::class)->take(50)->orderBy('id', 'desc');
     }
 
-    public function timezone()
+    public function timezone(): Timezone
     {
         return Timezone::find($this->getSetting('timezone_id'));
     }
@@ -459,12 +382,17 @@ class Client extends BaseModel implements HasLocalePreference
         })->first();
     }
 
-    public function industry()
+    public function industry(): BelongsTo
     {
         return $this->belongsTo(Industry::class);
     }
 
-    public function locale()
+    public function size(): BelongsTo
+    {
+        return $this->belongsTo(Size::class);
+    }
+
+    public function locale(): string
     {
         if (! $this->language()) {
             return 'en';
@@ -499,12 +427,12 @@ class Client extends BaseModel implements HasLocalePreference
         })->first();
     }
 
-    public function service() :ClientService
+    public function service(): ClientService
     {
         return new ClientService($this);
     }
 
-    public function updateBalance($amount) :ClientService
+    public function updateBalance($amount): ClientService
     {
         return $this->service()->updateBalance($amount);
     }
@@ -516,7 +444,7 @@ class Client extends BaseModel implements HasLocalePreference
      *
      * @return \stdClass stdClass object of settings
      */
-    public function getMergedSettings() :object
+    public function getMergedSettings(): object
     {
         if ($this->group_settings !== null) {
             $group_settings = ClientSettings::buildClientSettings($this->group_settings->settings, $this->settings);
@@ -535,7 +463,7 @@ class Client extends BaseModel implements HasLocalePreference
      * @param  string $setting The Setting parameter
      * @return mixed          The setting requested
      */
-    public function getSetting($setting)
+    public function getSetting($setting): mixed
     {
         /*Client Settings*/
         if ($this->settings && property_exists($this->settings, $setting) && isset($this->settings->{$setting})) {
@@ -544,9 +472,9 @@ class Client extends BaseModel implements HasLocalePreference
                 return $this->settings->{$setting};
             } elseif (is_bool($this->settings->{$setting})) {
                 return $this->settings->{$setting};
-            } elseif (is_int($this->settings->{$setting})) { //10-08-2022 integer client values are not being passed back! This resolves it.
+            } elseif (is_int($this->settings->{$setting})) {
                 return $this->settings->{$setting};
-            } elseif(is_float($this->settings->{$setting})) { //10-08-2022 integer client values are not being passed back! This resolves it.
+            } elseif(is_float($this->settings->{$setting})) {
                 return $this->settings->{$setting};
             }
         }
@@ -565,7 +493,6 @@ class Client extends BaseModel implements HasLocalePreference
 
         return '';
 
-//        throw new \Exception("Settings corrupted", 1);
     }
 
     public function getSettingEntity($setting)
@@ -591,12 +518,15 @@ class Client extends BaseModel implements HasLocalePreference
         throw new \Exception('Could not find a settings object', 1);
     }
 
-    public function documents()
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\MorphMany<Document>
+     */
+    public function documents(): \Illuminate\Database\Eloquent\Relations\MorphMany
     {
         return $this->morphMany(Document::class, 'documentable');
     }
 
-    public function group_settings()
+    public function group_settings(): BelongsTo
     {
         return $this->belongsTo(GroupSetting::class);
     }
@@ -606,22 +536,27 @@ class Client extends BaseModel implements HasLocalePreference
      *
      * @return null|CompanyGateway The Priority Credit Card gateway
      */
-    public function getCreditCardGateway() :?CompanyGateway
+    public function getCreditCardGateway(): ?CompanyGateway
     {
         $pms = $this->service()->getPaymentMethods(-1);
 
         foreach ($pms as $pm) {
             if ($pm['gateway_type_id'] == GatewayType::CREDIT_CARD) {
-                $cg = CompanyGateway::find($pm['company_gateway_id']);
 
-                if ($cg && ! property_exists($cg->fees_and_limits, strval(GatewayType::CREDIT_CARD))) {
+                $cg = CompanyGateway::query()->find($pm['company_gateway_id']);
+
+                if($cg->gateway_key == '80af24a6a691230bbec33e930ab40666') { //ensure we don't attempt to authorize paypal platform - yet.
+                    continue;
+                }
+
+                if ($cg && is_object($cg->fees_and_limits) && ! property_exists($cg->fees_and_limits, strval(GatewayType::CREDIT_CARD))) {
                     $fees_and_limits = $cg->fees_and_limits;
-                    $fees_and_limits->{GatewayType::CREDIT_CARD} = new FeesAndLimits;
+                    $fees_and_limits->{GatewayType::CREDIT_CARD} = new FeesAndLimits();
                     $cg->fees_and_limits = $fees_and_limits;
                     $cg->save();
                 }
 
-                if ($cg && $cg->fees_and_limits->{GatewayType::CREDIT_CARD}->is_enabled) {
+                if ($cg && is_object($cg->fees_and_limits) && $cg->fees_and_limits->{GatewayType::CREDIT_CARD}->is_enabled) {
                     return $cg;
                 }
             }
@@ -629,17 +564,18 @@ class Client extends BaseModel implements HasLocalePreference
 
         return null;
     }
-    public function getBACSGateway() :?CompanyGateway
+
+    public function getBACSGateway(): ?CompanyGateway
     {
         $pms = $this->service()->getPaymentMethods(-1);
 
         foreach ($pms as $pm) {
             if ($pm['gateway_type_id'] == GatewayType::BACS) {
-                $cg = CompanyGateway::find($pm['company_gateway_id']);
+                $cg = CompanyGateway::query()->find($pm['company_gateway_id']);
 
                 if ($cg && ! property_exists($cg->fees_and_limits, GatewayType::BACS)) {
                     $fees_and_limits = $cg->fees_and_limits;
-                    $fees_and_limits->{GatewayType::BACS} = new FeesAndLimits;
+                    $fees_and_limits->{GatewayType::BACS} = new FeesAndLimits();
                     $cg->fees_and_limits = $fees_and_limits;
                     $cg->save();
                 }
@@ -653,19 +589,44 @@ class Client extends BaseModel implements HasLocalePreference
         return null;
     }
 
+    public function getACSSGateway(): ?CompanyGateway
+    {
+        $pms = $this->service()->getPaymentMethods(-1);
+
+        foreach ($pms as $pm) {
+            if ($pm['gateway_type_id'] == GatewayType::ACSS) {
+                $cg = CompanyGateway::query()->find($pm['company_gateway_id']);
+
+                if ($cg && ! property_exists($cg->fees_and_limits, GatewayType::ACSS)) {
+                    $fees_and_limits = $cg->fees_and_limits;
+                    $fees_and_limits->{GatewayType::ACSS} = new FeesAndLimits();
+                    $cg->fees_and_limits = $fees_and_limits;
+                    $cg->save();
+                }
+
+                if ($cg && $cg->fees_and_limits->{GatewayType::ACSS}->is_enabled) {
+                    return $cg;
+                }
+            }
+        }
+
+        return null;
+    }
+
+
     //todo refactor this  - it is only searching for existing tokens
-    public function getBankTransferGateway() :?CompanyGateway
+    public function getBankTransferGateway(): ?CompanyGateway
     {
         $pms = $this->service()->getPaymentMethods(-1);
 
         if ($this->currency()->code == 'USD' && in_array(GatewayType::BANK_TRANSFER, array_column($pms, 'gateway_type_id'))) {
             foreach ($pms as $pm) {
                 if ($pm['gateway_type_id'] == GatewayType::BANK_TRANSFER) {
-                    $cg = CompanyGateway::find($pm['company_gateway_id']);
+                    $cg = CompanyGateway::query()->find($pm['company_gateway_id']);
 
                     if ($cg && ! property_exists($cg->fees_and_limits, GatewayType::BANK_TRANSFER)) {
                         $fees_and_limits = $cg->fees_and_limits;
-                        $fees_and_limits->{GatewayType::BANK_TRANSFER} = new FeesAndLimits;
+                        $fees_and_limits->{GatewayType::BANK_TRANSFER} = new FeesAndLimits();
                         $cg->fees_and_limits = $fees_and_limits;
                         $cg->save();
                     }
@@ -680,7 +641,7 @@ class Client extends BaseModel implements HasLocalePreference
         if ($this->currency()->code == 'EUR' && (in_array(GatewayType::BANK_TRANSFER, array_column($pms, 'gateway_type_id')) || in_array(GatewayType::SEPA, array_column($pms, 'gateway_type_id')))) {
             foreach ($pms as $pm) {
                 if ($pm['gateway_type_id'] == GatewayType::SEPA) {
-                    $cg = CompanyGateway::find($pm['company_gateway_id']);
+                    $cg = CompanyGateway::query()->find($pm['company_gateway_id']);
 
                     if ($cg && $cg->fees_and_limits->{GatewayType::SEPA}->is_enabled) {
                         return $cg;
@@ -692,7 +653,7 @@ class Client extends BaseModel implements HasLocalePreference
         if (in_array(GatewayType::DIRECT_DEBIT, array_column($pms, 'gateway_type_id'))) {
             foreach ($pms as $pm) {
                 if ($pm['gateway_type_id'] == GatewayType::DIRECT_DEBIT) {
-                    $cg = CompanyGateway::find($pm['company_gateway_id']);
+                    $cg = CompanyGateway::query()->find($pm['company_gateway_id']);
 
                     if ($cg && $cg->fees_and_limits->{GatewayType::DIRECT_DEBIT}->is_enabled) {
                         return $cg;
@@ -700,6 +661,19 @@ class Client extends BaseModel implements HasLocalePreference
                 }
             }
         }
+
+        if ($this->currency()->code == 'CAD' && in_array(GatewayType::ACSS, array_column($pms, 'gateway_type_id'))) {
+            foreach ($pms as $pm) {
+                if ($pm['gateway_type_id'] == GatewayType::ACSS) {
+                    $cg = CompanyGateway::query()->find($pm['company_gateway_id']);
+
+                    if ($cg && $cg->fees_and_limits->{GatewayType::ACSS}->is_enabled) {
+                        return $cg;
+                    }
+                }
+            }
+        }
+
 
         return null;
     }
@@ -714,12 +688,21 @@ class Client extends BaseModel implements HasLocalePreference
             return GatewayType::SEPA;
         }
 
+        //Special handler for GoCardless
+        if($this->currency()->code == 'CAD' && ($this->getBankTransferGateway()->gateway_key == 'b9886f9257f0c6ee7c302f1c74475f6c') ?? false) {
+            return GatewayType::DIRECT_DEBIT;
+        }
+
         if (in_array($this->currency()->code, ['EUR', 'GBP','DKK','SEK','AUD','NZD','USD'])) {
             return GatewayType::DIRECT_DEBIT;
         }
+
+        if(in_array($this->currency()->code, ['CAD'])) {
+            return GatewayType::ACSS;
+        }
     }
 
-    public function getCurrencyCode()
+    public function getCurrencyCode(): string
     {
         if ($this->currency()) {
             return $this->currency()->code;
@@ -728,7 +711,7 @@ class Client extends BaseModel implements HasLocalePreference
         return 'USD';
     }
 
-    public function validGatewayForAmount($fees_and_limits_for_payment_type, $amount) :bool
+    public function validGatewayForAmount($fees_and_limits_for_payment_type, $amount): bool
     {
         if (isset($fees_and_limits_for_payment_type)) {
             $fees_and_limits = $fees_and_limits_for_payment_type;
@@ -760,56 +743,56 @@ class Client extends BaseModel implements HasLocalePreference
         })->first()->locale;
     }
 
-    public function backup_path()
+    public function backup_path(): string
     {
         return $this->company->company_key.'/'.$this->client_hash.'/backups';
     }
 
-    public function invoice_filepath($invitation)
+    public function invoice_filepath($invitation): string
     {
         $contact_key = $invitation->contact->contact_key;
 
         return $this->company->company_key.'/'.$this->client_hash.'/'.$contact_key.'/invoices/';
     }
-    public function e_invoice_filepath($invitation)
+    public function e_invoice_filepath($invitation): string
     {
         $contact_key = $invitation->contact->contact_key;
 
         return $this->company->company_key.'/'.$this->client_hash.'/'.$contact_key.'/e_invoice/';
     }
 
-    public function quote_filepath($invitation)
+    public function quote_filepath($invitation): string
     {
         $contact_key = $invitation->contact->contact_key;
 
         return $this->company->company_key.'/'.$this->client_hash.'/'.$contact_key.'/quotes/';
     }
 
-    public function credit_filepath($invitation)
+    public function credit_filepath($invitation): string
     {
         $contact_key = $invitation->contact->contact_key;
 
         return $this->company->company_key.'/'.$this->client_hash.'/'.$contact_key.'/credits/';
     }
 
-    public function recurring_invoice_filepath($invitation)
+    public function recurring_invoice_filepath($invitation): string
     {
         $contact_key = $invitation->contact->contact_key;
 
         return $this->company->company_key.'/'.$this->client_hash.'/'.$contact_key.'/recurring_invoices/';
     }
 
-    public function company_filepath()
+    public function company_filepath(): string
     {
         return $this->company->company_key.'/';
     }
 
-    public function document_filepath()
+    public function document_filepath(): string
     {
         return $this->company->company_key.'/documents/';
     }
 
-    public function setCompanyDefaults($data, $entity_name) :array
+    public function setCompanyDefaults($data, $entity_name): array
     {
         $defaults = [];
 
@@ -829,10 +812,22 @@ class Client extends BaseModel implements HasLocalePreference
             $defaults['public_notes'] = $this->public_notes;
         }
 
+        $exchange_rate = new CurrencyApi();
+        $defaults['exchange_rate'] = 1 / $exchange_rate->exchangeRate($this->getSetting('currency_id'), $this->company->settings->currency_id);
+
         return $defaults;
     }
 
-    public function timezone_offset()
+    public function setExchangeRate()
+    {
+
+        $converter = new CurrencyApi();
+
+        return 1 / $converter->convert(1, $this->currency()->id, $this->company->settings->currency_id);
+
+    }
+
+    public function timezone_offset(): int
     {
         $offset = 0;
 
@@ -842,9 +837,8 @@ class Client extends BaseModel implements HasLocalePreference
             return 0;
         }
 
-        $timezone = $this->company->timezone();
+        $offset -= $this->company->utc_offset();
 
-        $offset -= $timezone->utc_offset;
         $offset += ($entity_send_time * 3600);
 
         return $offset;
@@ -862,13 +856,13 @@ class Client extends BaseModel implements HasLocalePreference
         ];
     }
 
-    public function translate_entity()
+    public function translate_entity(): string
     {
         return ctrans('texts.client');
     }
 
     public function portalUrl(bool $use_react_url): string
     {
-        return $use_react_url ? config('ninja.react_url'). "/#/clients/{$this->hashed_id}": config('ninja.app_url');
+        return $use_react_url ? config('ninja.react_url'). "/#/clients/{$this->hashed_id}" : config('ninja.app_url');
     }
 }

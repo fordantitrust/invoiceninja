@@ -117,6 +117,14 @@ class Wave extends BaseImport implements ImportInterface
 
         $this->transformer = new InvoiceTransformer($this->company);
 
+        foreach($data as $key => $invoice)
+        {
+            if(!isset($invoice['Invoice Number']) || empty($invoice['Invoice Number']))
+            {
+                unset($data[$key]);
+            }
+        }
+
         $invoice_count = $this->ingestInvoices($data, 'Invoice Number');
 
         $this->entity_count['invoices'] = $invoice_count;
@@ -189,7 +197,7 @@ class Wave extends BaseImport implements ImportInterface
 
         $this->transformer = new ExpenseTransformer($this->company);
 
-        $expense_count = $this->ingestExpenses($data, $entity_type);
+        $expense_count = $this->ingestExpenses($data);
 
         $this->entity_count['expenses'] = $expense_count;
     }
@@ -200,7 +208,7 @@ class Wave extends BaseImport implements ImportInterface
 
     private function groupExpenses($csvData)
     {
-        $grouped_expense = [];
+        $grouped = [];
         $key = 'Transaction ID';
 
         foreach ($csvData as $expense) {

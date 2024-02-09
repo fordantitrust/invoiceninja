@@ -18,9 +18,9 @@ use stdClass;
 
 class InvoiceItemFactory
 {
-    public static function create() : stdClass
+    public static function create(): stdClass
     {
-        $item = new stdClass;
+        $item = new stdClass();
         $item->quantity = 0;
         $item->cost = 0;
         $item->product_key = '';
@@ -50,7 +50,7 @@ class InvoiceItemFactory
      * @param  int    $items Number of line items to create
      * @return array        array of objects
      */
-    public static function generate(int $items = 1) :array
+    public static function generate(int $items = 1): array
     {
         $faker = Factory::create();
 
@@ -63,7 +63,7 @@ class InvoiceItemFactory
             $item->line_total = $item->quantity * $item->cost;
             $item->is_amount_discount = true;
             $item->discount = $faker->numberBetween(1, 10);
-            $item->notes = $faker->realText(50);
+            $item->notes = str_replace(['"',"'"], ['',""], $faker->realText(20));
             $item->product_key = $faker->word();
             // $item->custom_value1 = $faker->realText(10);
             // $item->custom_value2 = $faker->realText(10);
@@ -84,7 +84,7 @@ class InvoiceItemFactory
      * @param  int    $items Number of line items to create
      * @return array        array of objects
      */
-    public static function generateCredit(int $items = 1) :array
+    public static function generateCredit(int $items = 1): array
     {
         $faker = Factory::create();
 

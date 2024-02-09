@@ -51,12 +51,14 @@ class TranslationsExport extends Command
         'fi',
         'fr',
         'fr_CA',
+        'fr_CH',
         'he',
         'hr',
         'hu',
         'it',
         'ja',
         'km_KH',
+        'lo_LA',
         'lt',
         'lv_LV',
         'mk_MK',
@@ -94,7 +96,7 @@ class TranslationsExport extends Command
      */
     public function handle()
     {
-        $type =$this->option('type') ?? 'export';
+        $type = $this->option('type') ?? 'export';
 
         if ($type == 'import') {
             $this->import();
@@ -133,11 +135,13 @@ class TranslationsExport extends Command
         Storage::disk('local')->makeDirectory('lang');
 
         foreach ($this->langs as $lang) {
-            nlog($lang);
             Storage::disk('local')->makeDirectory("lang/{$lang}");
 
             $translations = Lang::getLoader()->load($lang, 'texts');
-nlog($translations);
+            foreach($translations as $key => $value) {
+                $translations[$key] = html_entity_decode($value);
+            }
+
             Storage::disk('local')->put("lang/{$lang}/{$lang}.json", json_encode(Arr::dot($translations), JSON_UNESCAPED_UNICODE));
         }
     }

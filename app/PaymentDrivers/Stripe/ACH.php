@@ -95,7 +95,7 @@ class ACH
     {
         $stripe_event = $event['data']['object'];
 
-        $token = ClientGatewayToken::where('token', $stripe_event['id'])
+        $token = ClientGatewayToken::query()->where('token', $stripe_event['id'])
                                    ->where('gateway_customer_reference', $stripe_event['customer'])
                                    ->first();
 
@@ -186,6 +186,17 @@ class ACH
         $description = $this->stripe->getDescription(false);
 
         $intent = false;
+
+        if (count($data['tokens']) == 1) {
+
+            $token = $data['tokens'][0];
+
+            $meta = $token->meta;
+
+            if(isset($meta->state) && $meta->state == 'unauthorized') {
+                return redirect()->route('client.payment_methods.show', $token->hashed_id);
+            }
+        }
 
         if (count($data['tokens']) == 0) {
             $intent =
@@ -297,6 +308,7 @@ class ACH
 
             switch ($e) {
                 case $e instanceof CardException:
+                    /** @var CardException $e */
                     $data['status'] = $e->getHttpStatus();
                     $data['error_type'] = $e->getError()->type;
                     $data['error_code'] = $e->getError()->code;
@@ -557,7 +569,7 @@ class ACH
         $state = property_exists($method, 'state') ? $method->state : 'unauthorized';
 
         try {
-            $payment_meta = new \stdClass;
+            $payment_meta = new \stdClass();
             $payment_meta->brand = (string) \sprintf('%s (%s)', $method->bank_name, ctrans('texts.ach'));
             $payment_meta->last4 = (string) $method->last4;
             $payment_meta->type = GatewayType::BANK_TRANSFER;
@@ -584,8 +596,9 @@ class ACH
                 'company_id' => $this->stripe->client->company_id,
             ])->first();
 
-            if($token)
+            if($token) {
                 return $token;
+            }
 
             return $this->stripe->storeGatewayToken($data, ['gateway_customer_reference' => $customer->id]);
         } catch (Exception $e) {

@@ -5,13 +5,14 @@ namespace App\Events\Subscription;
 use App\Models\Company;
 use App\Models\Subscription;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
 class SubscriptionWasCreated
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
+    use Dispatchable;
+    use InteractsWithSockets;
+    use SerializesModels;
 
     /**
      * @var Subscription
@@ -45,8 +46,8 @@ class SubscriptionWasCreated
      *
      * @return \Illuminate\Broadcasting\Channel|array
      */
-     public function broadcastOn()
-     {
+    public function broadcastOn()
+    {
         return [];
-     }
+    }
 }

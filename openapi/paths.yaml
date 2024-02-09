@@ -15,7 +15,7 @@ paths:
         - $ref: "#/components/parameters/page_meta"
       responses:
         200:
-          description: "Returns the client object"
+          description: "Returns the list of activities"
           headers:
             X-MINIMUM-CLIENT-VERSION:
               $ref: "#/components/headers/X-MINIMUM-CLIENT-VERSION"
@@ -25,8 +25,16 @@ paths:
               $ref: "#/components/headers/X-RateLimit-Limit"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/Client"
+              schema:  
+                type: object
+                properties:
+                  data: 
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Activity'
+                  meta:
+                    type: object
+                    $ref: '#/components/schemas/Meta'
         401:
           $ref: "#/components/responses/401"
         403:
@@ -242,8 +250,16 @@ paths:
               $ref: "#/components/headers/X-RateLimit-Limit"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/BankIntegration"
+              schema:  
+                type: object
+                properties:
+                  data: 
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BankIntegration'
+                  meta:
+                    type: object
+                    $ref: '#/components/schemas/Meta'
         401:
           $ref: "#/components/responses/401"
         403:
@@ -646,8 +662,16 @@ paths:
               $ref: "#/components/headers/X-RateLimit-Limit"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/BankTransaction"
+              schema:  
+                type: object
+                properties:
+                  data: 
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BankTransaction'
+                  meta:
+                    type: object
+                    $ref: '#/components/schemas/Meta'
         401:
           $ref: "#/components/responses/401"
         403:
@@ -991,8 +1015,16 @@ paths:
               $ref: "#/components/headers/X-RateLimit-Limit"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/BankTransactionRule"
+              schema:  
+                type: object
+                properties:
+                  data: 
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BankTransactionRule'
+                  meta:
+                    type: object
+                    $ref: '#/components/schemas/Meta'
         401:
           $ref: "#/components/responses/401"
         403:
@@ -1303,7 +1335,7 @@ paths:
     get:
       tags:
         - client_gateway_tokens
-      summary: "List of client tokens"
+      summary: "List of client payment tokens"
       description: "Lists client_gateway_tokens, search and filters allow fine grained lists to be generated.\n\n    Query parameters can be added to performed more fine grained filtering of the client_gateway_tokens, these are handled by the ClientGatewayTokenFilters class which defines the methods available"
       operationId: getClientGatewayTokens
       parameters:
@@ -1323,8 +1355,16 @@ paths:
               $ref: "#/components/headers/X-RateLimit-Limit"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ClientGatewayToken"
+              schema:  
+                type: object
+                properties:
+                  data: 
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ClientGatewayToken'
+                  meta:
+                    type: object
+                    $ref: '#/components/schemas/Meta'
         401:
           $ref: "#/components/responses/401"
         403:
@@ -1336,8 +1376,8 @@ paths:
     post:
       tags:
         - client_gateway_tokens
-      summary: "Adds a client"
-      description: "Adds an client to a company"
+      summary: "Adds a client payment token"
+      description: "Adds a client payment token to a company"
       operationId: storeClientGatewayToken
       parameters:
         - $ref: "#/components/parameters/X-API-TOKEN"
@@ -1345,7 +1385,7 @@ paths:
         - $ref: "#/components/parameters/include"
       responses:
         200:
-          description: "Returns the saved client object"
+          description: "Returns the saved client payment token object"
           headers:
             X-MINIMUM-CLIENT-VERSION:
               $ref: "#/components/headers/X-MINIMUM-CLIENT-VERSION"
@@ -1369,8 +1409,8 @@ paths:
     get:
       tags:
         - client_gateway_tokens
-      summary: "Shows a client"
-      description: "Displays a client by id"
+      summary: "Shows a client payment token"
+      description: "Displays a client payment token by id"
       operationId: showClientGatewayToken
       parameters:
         - $ref: "#/components/parameters/X-API-TOKEN"
@@ -1386,7 +1426,7 @@ paths:
           example: D2J234DFA
       responses:
         200:
-          description: "Returns the cl.ient object"
+          description: "Returns the client payment token object"
           headers:
             X-MINIMUM-CLIENT-VERSION:
               $ref: "#/components/headers/X-MINIMUM-CLIENT-VERSION"
@@ -1409,8 +1449,8 @@ paths:
     put:
       tags:
         - client_gateway_tokens
-      summary: "Updates a client"
-      description: "Handles the updating of a client by id"
+      summary: "Updates a client payment token"
+      description: "Handles the updating of a client payment token by id"
       operationId: updateClientGatewayToken
       parameters:
         - $ref: "#/components/parameters/X-API-TOKEN"
@@ -1426,7 +1466,7 @@ paths:
           example: D2J234DFA
       responses:
         200:
-          description: "Returns the client object"
+          description: "Returns the client payment token object"
           headers:
             X-MINIMUM-CLIENT-VERSION:
               $ref: "#/components/headers/X-MINIMUM-CLIENT-VERSION"
@@ -1450,7 +1490,7 @@ paths:
       tags:
         - client_gateway_tokens
       summary: "Deletes a client"
-      description: "Handles the deletion of a client by id"
+      description: "Handles the deletion of a client payment token by id"
       operationId: deleteClientGatewayToken
       parameters:
         - $ref: "#/components/parameters/X-API-TOKEN"
@@ -1486,7 +1526,7 @@ paths:
     get:
       tags:
         - client_gateway_tokens
-      summary: "Shows a client for editting"
+      summary: "Shows a client payment token for editting"
       description: "Displays a client by id"
       operationId: editClientGatewayToken
       parameters:
@@ -1503,7 +1543,7 @@ paths:
           example: D2J234DFA
       responses:
         200:
-          description: "Returns the client object"
+          description: "Returns the client payment token object"
           headers:
             X-MINIMUM-CLIENT-VERSION:
               $ref: "#/components/headers/X-MINIMUM-CLIENT-VERSION"
@@ -1527,7 +1567,7 @@ paths:
     get:
       tags:
         - client_gateway_tokens
-      summary: "Gets a new blank client object"
+      summary: "Gets a new blank client payment token object"
       description: "Returns a blank object with default values"
       operationId: getClientGatewayTokensCreate
       parameters:
@@ -1536,7 +1576,7 @@ paths:
         - $ref: "#/components/parameters/include"
       responses:
         200:
-          description: "A blank client object"
+          description: "A blank client payment token object"
           headers:
             X-MINIMUM-CLIENT-VERSION:
               $ref: "#/components/headers/X-MINIMUM-CLIENT-VERSION"
@@ -1580,8 +1620,16 @@ paths:
               $ref: "#/components/headers/X-RateLimit-Limit"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/Company"
+              schema:  
+                type: object
+                properties:
+                  data: 
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Company'
+                  meta:
+                    type: object
+                    $ref: '#/components/schemas/Meta'
         401:
           $ref: "#/components/responses/401"
         403:
@@ -1817,7 +1865,7 @@ paths:
         default:
           $ref: "#/components/responses/default"
   "/api/v1/companies/{id}/upload":
-    put:
+    post:
       tags:
         - companies
       summary: "Uploads a document to a company"
@@ -1835,6 +1883,23 @@ paths:
             type: string
             format: string
           example: D2J234DFA
+      requestBody:
+        description: "File Upload Body"
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                _method:
+                  type: string
+                  example: PUT
+                documents:
+                  type: array
+                  items:
+                    description: "Array of binary documents for upload"
+                    type: string
+                    format: binary
       responses:
         200:
           description: "Returns the client object"
@@ -1923,8 +1988,16 @@ paths:
               $ref: "#/components/headers/X-RateLimit-Limit"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/CompanyGateway"
+              schema:  
+                type: object
+                properties:
+                  data: 
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CompanyGateway'
+                  meta:
+                    type: object
+                    $ref: '#/components/schemas/Meta'
         401:
           $ref: "#/components/responses/401"
         403:
@@ -2230,8 +2303,16 @@ paths:
               $ref: "#/components/headers/X-RateLimit-Limit"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/CompanyLedger"
+              schema:  
+                type: object
+                properties:
+                  data: 
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CompanyLedger'
+                  meta:
+                    type: object
+                    $ref: '#/components/schemas/Meta'
         401:
           $ref: "#/components/responses/401"
         403:
@@ -2334,8 +2415,16 @@ paths:
               $ref: "#/components/headers/X-RateLimit-Limit"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/Design"
+              schema:  
+                type: object
+                properties:
+                  data: 
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Design'
+                  meta:
+                    type: object
+                    $ref: '#/components/schemas/Meta'
         401:
           $ref: "#/components/responses/401"
         403:
@@ -2642,8 +2731,16 @@ paths:
               $ref: "#/components/headers/X-RateLimit-Limit"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/Document"
+              schema:  
+                type: object
+                properties:
+                  data: 
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Document'
+                  meta:
+                    type: object
+                    $ref: '#/components/schemas/Meta'
         401:
           $ref: "#/components/responses/401"
         403:
@@ -2662,11 +2759,15 @@ paths:
       parameters:
         - $ref: "#/components/parameters/X-Requested-With"
       requestBody:
-        description: "The template subject and body"
+        description: "Required fields to send an email"
         required: true
         content:
           application/json:
             schema:
+              required:
+                - entity
+                - entity_id
+                - template
               properties:
                 subject:
                   description: "The email subject"
@@ -2680,9 +2781,13 @@ paths:
                 entity_id:
                   description: "The entity_id"
                   type: string
+                cc_email:
+                  description: "The email address of a user to be CC'd on the email"
+                  type: string
                 template:
                   description: "The template required"
                   type: string
+                  example: invoice,quote,credit,purchase_order,payment,payment_partial,reminder1,reminder2,reminder3,reminder_endless
               type: object
       responses:
         200:
@@ -2727,8 +2832,16 @@ paths:
               $ref: "#/components/headers/X-RateLimit-Limit"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ExpenseCategory"
+              schema:  
+                type: object
+                properties:
+                  data: 
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ExpenseCategory'
+                  meta:
+                    type: object
+                    $ref: '#/components/schemas/Meta'
         401:
           $ref: "#/components/responses/401"
         403:
@@ -3023,8 +3136,16 @@ paths:
               $ref: "#/components/headers/X-RateLimit-Limit"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/Expense"
+              schema:  
+                type: object
+                properties:
+                  data: 
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Expense'
+                  meta:
+                    type: object
+                    $ref: '#/components/schemas/Meta'
         401:
           $ref: "#/components/responses/401"
         403:
@@ -3036,8 +3157,8 @@ paths:
     post:
       tags:
         - expenses
-      summary: "Adds a client"
-      description: "Adds an client to a company"
+      summary: "Adds an expense"
+      description: "Adds a expense to a company"
       operationId: storeExpense
       parameters:
         - $ref: "#/components/parameters/X-API-TOKEN"
@@ -3045,7 +3166,7 @@ paths:
         - $ref: "#/components/parameters/include"
       responses:
         200:
-          description: "Returns the saved client object"
+          description: "Returns the saved expense object"
           headers:
             X-MINIMUM-CLIENT-VERSION:
               $ref: "#/components/headers/X-MINIMUM-CLIENT-VERSION"
@@ -3069,8 +3190,8 @@ paths:
     get:
       tags:
         - expenses
-      summary: "Shows a client"
-      description: "Displays a client by id"
+      summary: "Shows a expense"
+      description: "Displays a expense by id"
       operationId: showExpense
       parameters:
         - $ref: "#/components/parameters/X-API-TOKEN"
@@ -3109,8 +3230,8 @@ paths:
     put:
       tags:
         - expenses
-      summary: "Updates a client"
-      description: "Handles the updating of a client by id"
+      summary: "Updates a expense"
+      description: "Handles the updating of a expense by id"
       operationId: updateExpense
       parameters:
         - $ref: "#/components/parameters/X-API-TOKEN"
@@ -3126,7 +3247,7 @@ paths:
           example: D2J234DFA
       responses:
         200:
-          description: "Returns the client object"
+          description: "Returns the expense object"
           headers:
             X-MINIMUM-CLIENT-VERSION:
               $ref: "#/components/headers/X-MINIMUM-CLIENT-VERSION"
@@ -3149,8 +3270,8 @@ paths:
     delete:
       tags:
         - expenses
-      summary: "Deletes a client"
-      description: "Handles the deletion of a client by id"
+      summary: "Deletes a expense"
+      description: "Handles the deletion of a expense by id"
       operationId: deleteExpense
       parameters:
         - $ref: "#/components/parameters/X-API-TOKEN"
@@ -3186,7 +3307,7 @@ paths:
     get:
       tags:
         - expenses
-      summary: "Shows a client for editting"
+      summary: "Shows a expense for editing"
       description: "Displays a client by id"
       operationId: editExpense
       parameters:
@@ -3203,7 +3324,7 @@ paths:
           example: D2J234DFA
       responses:
         200:
-          description: "Returns the client object"
+          description: "Returns the expense object"
           headers:
             X-MINIMUM-CLIENT-VERSION:
               $ref: "#/components/headers/X-MINIMUM-CLIENT-VERSION"
@@ -3227,7 +3348,7 @@ paths:
     get:
       tags:
         - expenses
-      summary: "Gets a new blank client object"
+      summary: "Gets a new blank expense object"
       description: "Returns a blank object with default values"
       operationId: getExpensesCreate
       parameters:
@@ -3236,7 +3357,7 @@ paths:
         - $ref: "#/components/parameters/include"
       responses:
         200:
-          description: "A blank client object"
+          description: "A blank expense object"
           headers:
             X-MINIMUM-CLIENT-VERSION:
               $ref: "#/components/headers/X-MINIMUM-CLIENT-VERSION"
@@ -3301,7 +3422,7 @@ paths:
         default:
           $ref: "#/components/responses/default"
   "/api/v1/expenses/{id}/upload":
-    put:
+    post:
       tags:
         - expense
       summary: "Uploads a document to a expense"
@@ -3319,6 +3440,23 @@ paths:
             type: string
             format: string
           example: D2J234DFA
+      requestBody:
+        description: "File Upload Body"
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                _method:
+                  type: string
+                  example: PUT
+                documents:
+                  type: array
+                  items:
+                    description: "Array of binary documents for upload"
+                    type: string
+                    format: binary
       responses:
         200:
           description: "Returns the Expense object"
@@ -3391,8 +3529,16 @@ paths:
               $ref: "#/components/headers/X-RateLimit-Limit"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/GroupSetting"
+              schema:  
+                type: object
+                properties:
+                  data: 
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GroupSetting'
+                  meta:
+                    type: object
+                    $ref: '#/components/schemas/Meta'
         401:
           $ref: "#/components/responses/401"
         403:
@@ -3665,7 +3811,7 @@ paths:
         default:
           $ref: "#/components/responses/default"
   "/api/v1/group_settings/{id}/upload":
-    put:
+    post:
       tags:
         - group_settings
       summary: "Uploads a document to a group setting"
@@ -3683,6 +3829,23 @@ paths:
             type: string
             format: string
           example: D2J234DFA
+      requestBody:
+        description: "File Upload Body"
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                _method:
+                  type: string
+                  example: PUT
+                documents:
+                  type: array
+                  items:
+                    description: "Array of binary documents for upload"
+                    type: string
+                    format: binary
       responses:
         200:
           description: "Returns the Group Setting object"
@@ -3875,8 +4038,8 @@ paths:
     post:
       tags:
         - logout
-      summary: "Gets a list of logout"
-      description: "Lists all logout"
+      summary: "Logs the user out of their current session"
+      description: "Logs the user out of their current session"
       operationId: getLogout
       parameters:
         - $ref: "#/components/parameters/X-API-TOKEN"
@@ -4062,8 +4225,16 @@ paths:
               $ref: "#/components/headers/X-RateLimit-Limit"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/PaymentTerm"
+              schema:  
+                type: object
+                properties:
+                  data: 
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PaymentTerm'
+                  meta:
+                    type: object
+                    $ref: '#/components/schemas/Meta'
         401:
           $ref: "#/components/responses/401"
         403:
@@ -4496,8 +4667,16 @@ paths:
               $ref: "#/components/headers/X-RateLimit-Limit"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/RecurringExpense"
+              schema:  
+                type: object
+                properties:
+                  data: 
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RecurringExpense'
+                  meta:
+                    type: object
+                    $ref: '#/components/schemas/Meta'
         401:
           $ref: "#/components/responses/401"
         403:
@@ -4509,8 +4688,8 @@ paths:
     post:
       tags:
         - recurring_expenses
-      summary: "Adds a client"
-      description: "Adds an client to a company"
+      summary: "Adds a recurring expense"
+      description: "Adds a recurring expense to a company"
       operationId: storeRecurringExpense
       parameters:
         - $ref: "#/components/parameters/X-API-TOKEN"
@@ -4518,7 +4697,7 @@ paths:
         - $ref: "#/components/parameters/include"
       responses:
         200:
-          description: "Returns the saved client object"
+          description: "Returns the saved recurring expense object"
           headers:
             X-MINIMUM-CLIENT-VERSION:
               $ref: "#/components/headers/X-MINIMUM-CLIENT-VERSION"
@@ -4542,8 +4721,8 @@ paths:
     get:
       tags:
         - recurring_expenses
-      summary: "Shows a client"
-      description: "Displays a client by id"
+      summary: "Shows a recurring expense"
+      description: "Displays a recurring expense by id"
       operationId: showRecurringExpense
       parameters:
         - $ref: "#/components/parameters/X-API-TOKEN"
@@ -4582,8 +4761,8 @@ paths:
     put:
       tags:
         - recurring_expenses
-      summary: "Updates a client"
-      description: "Handles the updating of a client by id"
+      summary: "Updates a recurring expense"
+      description: "Handles the updating of a recurring expense by id"
       operationId: updateRecurringExpense
       parameters:
         - $ref: "#/components/parameters/X-API-TOKEN"
@@ -4599,7 +4778,7 @@ paths:
           example: D2J234DFA
       responses:
         200:
-          description: "Returns the client object"
+          description: "Returns the recurring expense object"
           headers:
             X-MINIMUM-CLIENT-VERSION:
               $ref: "#/components/headers/X-MINIMUM-CLIENT-VERSION"
@@ -4622,8 +4801,8 @@ paths:
     delete:
       tags:
         - recurring_expenses
-      summary: "Deletes a client"
-      description: "Handles the deletion of a client by id"
+      summary: "Deletes a recurring expense"
+      description: "Handles the deletion of a recurring expense by id"
       operationId: deleteRecurringExpense
       parameters:
         - $ref: "#/components/parameters/X-API-TOKEN"
@@ -4659,8 +4838,8 @@ paths:
     get:
       tags:
         - recurring_expenses
-      summary: "Shows a client for editting"
-      description: "Displays a client by id"
+      summary: "Shows a recurring expense for editting"
+      description: "Displays a recurring expense by id"
       operationId: editRecurringExpense
       parameters:
         - $ref: "#/components/parameters/X-API-TOKEN"
@@ -4676,7 +4855,7 @@ paths:
           example: D2J234DFA
       responses:
         200:
-          description: "Returns the client object"
+          description: "Returns the recurring expense object"
           headers:
             X-MINIMUM-CLIENT-VERSION:
               $ref: "#/components/headers/X-MINIMUM-CLIENT-VERSION"
@@ -4700,7 +4879,7 @@ paths:
     get:
       tags:
         - recurring_expenses
-      summary: "Gets a new blank client object"
+      summary: "Gets a new blank recurring expense object"
       description: "Returns a blank object with default values"
       operationId: getRecurringExpensesCreate
       parameters:
@@ -4709,7 +4888,7 @@ paths:
         - $ref: "#/components/parameters/include"
       responses:
         200:
-          description: "A blank client object"
+          description: "A blank recurring expense object"
           headers:
             X-MINIMUM-CLIENT-VERSION:
               $ref: "#/components/headers/X-MINIMUM-CLIENT-VERSION"
@@ -4774,7 +4953,7 @@ paths:
         default:
           $ref: "#/components/responses/default"
   "/api/v1/recurring_expenses/{id}/upload":
-    put:
+    post:
       tags:
         - recurring_expense
       summary: "Uploads a document to a recurring_expense"
@@ -4792,6 +4971,23 @@ paths:
             type: string
             format: string
           example: D2J234DFA
+      requestBody:
+        description: "File Upload Body"
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                _method:
+                  type: string
+                  example: PUT
+                documents:
+                  type: array
+                  items:
+                    description: "Array of binary documents for upload"
+                    type: string
+                    format: binary
       responses:
         200:
           description: "Returns the RecurringExpense object"
@@ -4838,8 +5034,16 @@ paths:
               $ref: "#/components/headers/X-RateLimit-Limit"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/RecurringQuote"
+              schema:  
+                type: object
+                properties:
+                  data: 
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RecurringQuote'
+                  meta:
+                    type: object
+                    $ref: '#/components/schemas/Meta'
         401:
           $ref: "#/components/responses/401"
         403:
@@ -5734,8 +5938,16 @@ paths:
               $ref: "#/components/headers/X-RateLimit-Limit"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/Subscription"
+              schema:  
+                type: object
+                properties:
+                  data: 
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Subscription'
+                  meta:
+                    type: object
+                    $ref: '#/components/schemas/Meta'
         401:
           $ref: "#/components/responses/401"
         403:
@@ -6075,8 +6287,16 @@ paths:
               $ref: "#/components/headers/X-RateLimit-Limit"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/SystemLog"
+              schema:  
+                type: object
+                properties:
+                  data: 
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SystemLog'
+                  meta:
+                    type: object
+                    $ref: '#/components/schemas/Meta'
         401:
           $ref: "#/components/responses/401"
         403:
@@ -6380,8 +6600,16 @@ paths:
               $ref: "#/components/headers/X-RateLimit-Limit"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/TaskStatus"
+              schema:  
+                type: object
+                properties:
+                  data: 
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TaskStatus'
+                  meta:
+                    type: object
+                    $ref: '#/components/schemas/Meta'
         401:
           $ref: "#/components/responses/401"
         403:
@@ -6685,8 +6913,16 @@ paths:
               $ref: "#/components/headers/X-RateLimit-Limit"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/TaxRate"
+              schema:  
+                type: object
+                properties:
+                  data: 
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TaxRate'
+                  meta:
+                    type: object
+                    $ref: '#/components/schemas/Meta'
         401:
           $ref: "#/components/responses/401"
         403:
@@ -6994,8 +7230,16 @@ paths:
               $ref: "#/components/headers/X-RateLimit-Limit"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/CompanyToken"
+              schema:  
+                type: object
+                properties:
+                  data: 
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CompanyToken'
+                  meta:
+                    type: object
+                    $ref: '#/components/schemas/Meta'
         401:
           $ref: "#/components/responses/401"
         403:
@@ -7294,8 +7538,16 @@ paths:
               $ref: "#/components/headers/X-RateLimit-Limit"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/User"
+              schema:  
+                type: object
+                properties:
+                  data: 
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  meta:
+                    type: object
+                    $ref: '#/components/schemas/Meta'
         401:
           $ref: "#/components/responses/401"
         403:
@@ -7742,8 +7994,16 @@ paths:
               $ref: "#/components/headers/X-RateLimit-Limit"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/Webhook"
+              schema:  
+                type: object
+                properties:
+                  data: 
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Webhook'
+                  meta:
+                    type: object
+                    $ref: '#/components/schemas/Meta'
         401:
           $ref: "#/components/responses/401"
         403:

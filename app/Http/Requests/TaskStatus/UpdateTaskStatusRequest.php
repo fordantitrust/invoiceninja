@@ -13,7 +13,6 @@ namespace App\Http\Requests\TaskStatus;
 
 use App\Http\Requests\Request;
 use App\Utils\Traits\MakesHash;
-use Illuminate\Validation\Rule;
 
 class UpdateTaskStatusRequest extends Request
 {
@@ -24,7 +23,7 @@ class UpdateTaskStatusRequest extends Request
      *
      * @return bool
      */
-    public function authorize() : bool
+    public function authorize(): bool
     {
         return auth()->user()->isAdmin();
     }

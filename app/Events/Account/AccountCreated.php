@@ -22,7 +22,9 @@ use Illuminate\Queue\SerializesModels;
  */
 class AccountCreated
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
+    use Dispatchable;
+    use InteractsWithSockets;
+    use SerializesModels;
 
     public $user;
 
@@ -49,9 +51,9 @@ class AccountCreated
     //  *
     //  * @return Channel|array
     //  */
-     public function broadcastOn()
-     {
+    public function broadcastOn()
+    {
         return [];
-       //  return new PrivateChannel('channel-name');
-     }
+        //  return new PrivateChannel('channel-name');
+    }
 }

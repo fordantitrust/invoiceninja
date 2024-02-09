@@ -39,7 +39,7 @@ class UserRepository extends BaseRepository
      * @param bool $unset_company_user
      * @return \App\Models\User user Object
      */
-    public function save(array $data, User $user, $unset_company_user = false)
+    public function save(array $data, User $user, $unset_company_user = false, $is_migrating = false)
     {
         $details = $data;
 
@@ -56,9 +56,6 @@ class UserRepository extends BaseRepository
         $company = auth()->user()->company();
         $account = $company->account;
 
-        // if(array_key_exists('oauth_provider_id', $details))
-        //     unset($details['oauth_provider_id']);
-        
         if (request()->has('validated_phone')) {
             $details['phone'] = request()->input('validated_phone');
             $user->verified_phone_number = false;
@@ -71,7 +68,7 @@ class UserRepository extends BaseRepository
             $user->password = Hash::make($data['password']);
         }
 
-        if (! $user->confirmation_code) {
+        if (! $user->confirmation_code && !$is_migrating) {
             $user->confirmation_code = $this->createDbHash($company->db);
         }
 
@@ -84,7 +81,7 @@ class UserRepository extends BaseRepository
         $user->save();
 
         if (isset($data['company_user'])) {
-            $cu = CompanyUser::whereUserId($user->id)->whereCompanyId($company->id)->withTrashed()->first();
+            $cu = CompanyUser::query()->whereUserId($user->id)->whereCompanyId($company->id)->withTrashed()->first();
 
             /*No company user exists - attach the user*/
             if (! $cu) {
@@ -103,8 +100,8 @@ class UserRepository extends BaseRepository
                         (new CreateCompanyToken($cu->company, $cu->user, 'restored_user'))->handle();
                     }
                 } else {
-                    $cu->notifications = $data['company_user']['notifications'];
-                    $cu->settings = $data['company_user']['settings'];
+                    $cu->notifications = $data['company_user']['notifications'] ?? '';
+                    $cu->settings = $data['company_user']['settings'] ?? '';
                     $cu->save();
                 }
             }
@@ -123,7 +120,7 @@ class UserRepository extends BaseRepository
 
     public function destroy(array $data, User $user)
     {
-        if ($user->isOwner()) {
+        if ($user->hasOwnerFlag()) {
             return $user;
         }
 
@@ -132,7 +129,7 @@ class UserRepository extends BaseRepository
 
             $company = auth()->user()->company();
 
-            $cu = CompanyUser::whereUserId($user->id)
+            $cu = CompanyUser::query()->whereUserId($user->id)
                              ->whereCompanyId($company->id)
                              ->first();
 
@@ -140,7 +137,7 @@ class UserRepository extends BaseRepository
             $cu->forceDelete();
         }
 
-        event(new UserWasDeleted($user, auth()->user(), $company, Ninja::eventVars(auth()->user() ? auth()->user()->id : null)));
+        event(new UserWasDeleted($user, auth()->user(), auth()->user()->company(), Ninja::eventVars(auth()->user() ? auth()->user()->id : null)));
 
         $user->delete();
 
@@ -154,7 +151,7 @@ class UserRepository extends BaseRepository
     {
         $company = auth()->user()->company();
 
-        $cu = CompanyUser::whereUserId($user->id)
+        $cu = CompanyUser::query()->whereUserId($user->id)
                          ->whereCompanyId($company->id)
                          ->first();
 
@@ -193,7 +190,7 @@ class UserRepository extends BaseRepository
         }
 
         if (Ninja::isHosted()) {
-            $count = User::where('account_id', auth()->user()->account_id)->count();
+            $count = User::query()->where('account_id', auth()->user()->account_id)->count();
             if ($count >= auth()->user()->account->num_users) {
                 return;
             }

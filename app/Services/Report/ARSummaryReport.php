@@ -19,7 +19,6 @@ use App\Models\Invoice;
 use App\Utils\Ninja;
 use App\Utils\Number;
 use App\Utils\Traits\MakesDates;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\App;
 use League\Csv\Writer;
 
@@ -28,10 +27,12 @@ class ARSummaryReport extends BaseExport
     use MakesDates;
 
     public Writer $csv;
-    
+
     public string $date_key = 'created_at';
 
     public Client $client;
+
+    private float $total = 0;
 
     public array $report_keys = [
         'client_name',
@@ -69,7 +70,7 @@ class ARSummaryReport extends BaseExport
         $t->replace(Ninja::transformTranslations($this->company->settings));
 
         $this->csv = Writer::createFromString();
-        
+
         $this->csv->insertOne([]);
         $this->csv->insertOne([]);
         $this->csv->insertOne([]);
@@ -89,9 +90,9 @@ class ARSummaryReport extends BaseExport
             ->orderBy('balance', 'desc')
             ->cursor()
             ->each(function ($client) {
-                        
+
                 $this->csv->insertOne($this->buildRow($client));
-                        
+
             });
 
         return $this->csv->toString();
@@ -101,17 +102,22 @@ class ARSummaryReport extends BaseExport
     {
         $this->client = $client;
 
-        return [
+        $row = [
             $this->client->present()->name(),
             $this->client->number,
             $this->client->id_number,
-            $this->getCurrent(),  
+            $this->getCurrent(),
             $this->getAgingAmount('30'),
             $this->getAgingAmount('60'),
             $this->getAgingAmount('90'),
             $this->getAgingAmount('120'),
             $this->getAgingAmount('120+'),
+            Number::formatMoney($this->total, $this->client),
         ];
+
+        $this->total = 0;
+
+        return $row;
     }
 
     private function getCurrent(): string
@@ -122,11 +128,13 @@ class ARSummaryReport extends BaseExport
             ->whereIn('status_id', [Invoice::STATUS_SENT, Invoice::STATUS_PARTIAL])
             ->where('balance', '>', 0)
             ->where('is_deleted', 0)
-            ->where(function ($query){
+            ->where(function ($query) {
                 $query->where('due_date', '>', now()->startOfDay())
                     ->orWhereNull('due_date');
             })
             ->sum('balance');
+
+        $this->total += $amount;
 
         return Number::formatMoney($amount, $this->client);
 
@@ -152,6 +160,8 @@ class ARSummaryReport extends BaseExport
             ->where('is_deleted', 0)
             ->whereBetween('due_date', [$to, $from])
             ->sum('balance');
+
+        $this->total += $amount;
 
         return Number::formatMoney($amount, $this->client);
     }
@@ -200,7 +210,7 @@ class ARSummaryReport extends BaseExport
         }
     }
 
-    public function buildHeader() :array
+    public function buildHeader(): array
     {
         $header = [];
 

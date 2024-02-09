@@ -12,13 +12,9 @@
 namespace App\Http\Requests\Task;
 
 use App\Http\Requests\Request;
-use App\Models\Task;
-use App\Utils\Traits\BulkOptions;
 
 class BulkTaskRequest extends Request
 {
-    use BulkOptions;
-
     /**
      * Determine if the user is authorized to make this request.
      *
@@ -26,7 +22,7 @@ class BulkTaskRequest extends Request
      */
     public function authorize()
     {
-        return auth()->user()->can(auth()->user()->isAdmin(), Task::class);
+        return true;
     }
 
     /**
@@ -36,13 +32,14 @@ class BulkTaskRequest extends Request
      */
     public function rules()
     {
-        $rules = $this->getGlobalRules();
 
-        /* We don't require IDs on bulk storing. */
-        if ($this->action !== self::$STORE_METHOD) {
-            $rules['ids'] = ['required'];
-        }
+        return [
+            'action' => 'required|string',
+            'ids' => 'required|array',
+            'template' => 'sometimes|string',
+            'template_id' => 'sometimes|string',
+            'send_email' => 'sometimes|bool'
+        ];
 
-        return $rules;
     }
 }

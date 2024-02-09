@@ -22,16 +22,20 @@ use Illuminate\Queue\SerializesModels;
 
 class BankMatchingService implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
+
     public function __construct(public $company_id, public $db)
     {
     }
 
-    public function handle() :void
+    public function handle(): void
     {
         MultiDB::setDb($this->db);
 
-        BankTransaction::where('company_id', $this->company_id)
+        BankTransaction::query()->where('company_id', $this->company_id)
            ->where('status_id', BankTransaction::STATUS_UNMATCHED)
            ->cursor()
            ->each(function ($bt) {

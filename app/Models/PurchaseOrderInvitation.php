@@ -39,11 +39,11 @@ use Illuminate\Support\Str;
  * @property int|null $updated_at
  * @property int|null $deleted_at
  * @property string|null $email_status
- * @property-read \App\Models\Company $company
- * @property-read \App\Models\VendorContact $contact
- * @property-read mixed $hashed_id
- * @property-read \App\Models\PurchaseOrder $purchase_order
- * @property-read \App\Models\User $user
+ * @property \App\Models\Company $company
+ * @property \App\Models\VendorContact $contact
+ * @property string $hashed_id
+ * @property \App\Models\PurchaseOrder $purchase_order
+ * @property \App\Models\User $user
  * @method static \Illuminate\Database\Eloquent\Builder|BaseModel company()
  * @method static \Illuminate\Database\Eloquent\Builder|BaseModel exclude($columns)
  * @method static \Database\Factories\PurchaseOrderInvitationFactory factory($count = null, $state = [])
@@ -97,60 +97,53 @@ class PurchaseOrderInvitation extends BaseModel
         return self::class;
     }
 
+    public function getEntityString(): string
+    {
+        return 'purchase_order';
+    }
+
     public function entityType()
     {
         return PurchaseOrder::class;
     }
 
-    /**
-     * @return mixed
-     */
-    public function purchase_order()
+    public function purchase_order(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(PurchaseOrder::class)->withTrashed();
     }
 
-    /**
-     * @return mixed
-     */
-    public function entity()
+    public function entity(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(PurchaseOrder::class)->withTrashed();
     }
 
-    /**
-     * @return mixed
-     */
-    public function contact()
+    public function contact(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(VendorContact::class, 'vendor_contact_id', 'id')->withTrashed();
     }
 
-    /**
-     * @return mixed
-     */
-    public function user()
+    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class)->withTrashed();
     }
 
-    public function company()
+    public function company(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Company::class);
     }
 
-    public function getName()
+    public function getName(): string
     {
         return $this->key;
     }
 
-    public function markViewed()
+    public function markViewed(): void
     {
         $this->viewed_date = Carbon::now();
         $this->save();
     }
 
-    public function getPortalLink() :string
+    public function getPortalLink(): string
     {
         if (Ninja::isHosted()) {
             $domain = $this->company->domain();
@@ -171,7 +164,7 @@ class PurchaseOrderInvitation extends BaseModel
         }
     }
 
-    public function getLink() :string
+    public function getLink(): string
     {
         $entity_type = Str::snake(class_basename($this->entityType()));
 
@@ -194,7 +187,7 @@ class PurchaseOrderInvitation extends BaseModel
         }
     }
 
-    public function getAdminLink($use_react_link = false) :string
+    public function getAdminLink($use_react_link = false): string
     {
         return $use_react_link ? $this->getReactLink() : $this->getLink().'?silent=true';
     }
@@ -205,5 +198,5 @@ class PurchaseOrderInvitation extends BaseModel
 
         return config('ninja.react_url')."/#/{$entity_type}s/{$this->{$entity_type}->hashed_id}/edit";
     }
-    
+
 }

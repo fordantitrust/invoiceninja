@@ -18,7 +18,6 @@ use App\Models\Client;
 use App\Models\Company;
 use App\Models\Invoice;
 use App\Models\User;
-use App\Services\Report\ARDetailReport;
 use App\Services\Report\TaxSummaryReport;
 use App\Utils\Traits\MakesHash;
 use Illuminate\Routing\Middleware\ThrottleRequests;
@@ -165,6 +164,8 @@ class TaxSummaryReportTest extends TestCase
 
         $pl = new TaxSummaryReport($this->company, $this->payload);
         $response = $pl->run();
+
+        nlog($response);
 
         $this->assertIsString($response);
 

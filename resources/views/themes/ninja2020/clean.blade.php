@@ -11,7 +11,7 @@
     })(window,document,'script','dataLayer','GTM-WMJ5W23');</script>
     <!-- End Google Tag Manager -->
     @endif
-    
+
         <!-- Error: {{ session('error') }} -->
 
         @if (config('services.analytics.tracking_id'))
@@ -29,9 +29,6 @@
                 function trackEvent(category, action) {
                     ga('send', 'event', category, action, this.src);
                 }
-            </script>
-            <script>
-                Vue.config.devtools = true;
             </script>
         @else
             <script>
@@ -57,8 +54,7 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
         <!-- Scripts -->
-        <script src="{{ mix('js/app.js') }}" defer></script>
-        <script src="{{ asset('vendor/alpinejs@2.8.2/alpine.js') }}" defer></script>
+        @vite('resources/js/app.js')
 
         <!-- Fonts -->
         {{-- <link rel="dns-prefetch" href="https://fonts.gstatic.com"> --}}
@@ -75,9 +71,9 @@
               unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
             }
         </style>
-        
+
         <!-- Styles -->
-        <link href="{{ mix('css/app.css') }}" rel="stylesheet">
+        @vite('resources/sass/app.scss')
         @if(auth()->guard('contact')->user() && !auth()->guard('contact')->user()->user->account->isPaid())
         {{-- <link href="{{ mix('favicon.png') }}" rel="shortcut icon" type="image/png"> --}}
         @endif
@@ -108,7 +104,7 @@
 
         @yield('body')
 
-        @livewireScripts
+        @livewireScriptConfig 
 
         <script src="{{ asset('vendor/cookieconsent@3/cookieconsent.min.js') }}" data-cfasync="false"></script>
         <script>

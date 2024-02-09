@@ -11,7 +11,6 @@
 
 namespace App\Transformers;
 
-use App\Models\BankTransaction;
 use App\Models\BankTransactionRule;
 use App\Models\Client;
 use App\Models\Company;
@@ -29,13 +28,13 @@ class BankTransactionRuleTransformer extends EntityTransformer
     /**
      * @var array
      */
-    protected $defaultIncludes = [
+    protected array $defaultIncludes = [
     ];
 
     /**
      * @var array
      */
-    protected $availableIncludes = [
+    protected array $availableIncludes = [
         'company',
         'vendor',
         'client',
@@ -43,7 +42,7 @@ class BankTransactionRuleTransformer extends EntityTransformer
     ];
 
     /**
-     * @param BankTransaction $bank_integration
+     * @param BankTransactionRule $bank_transaction_rule
      * @return array
      */
     public function transform(BankTransactionRule $bank_transaction_rule)
@@ -79,7 +78,7 @@ class BankTransactionRuleTransformer extends EntityTransformer
         }
 
         $transformer = new ClientTransformer($this->serializer);
-        
+
         return $this->includeItem($bank_transaction_rule->client, $transformer, Client::class);
     }
 

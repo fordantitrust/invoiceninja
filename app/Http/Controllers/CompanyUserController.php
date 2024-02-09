@@ -11,13 +11,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
-use App\Models\CompanyUser;
-use Illuminate\Http\Response;
-use App\Transformers\CompanyUserTransformer;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
-use App\Http\Requests\CompanyUser\UpdateCompanyUserRequest;
 use App\Http\Requests\CompanyUser\UpdateCompanyUserPreferencesRequest;
+use App\Http\Requests\CompanyUser\UpdateCompanyUserRequest;
+use App\Models\CompanyUser;
+use App\Models\User;
+use App\Transformers\CompanyUserTransformer;
+use App\Transformers\UserTransformer;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\Response;
 
 class CompanyUserController extends BaseController
 {
@@ -110,9 +111,11 @@ class CompanyUserController extends BaseController
      */
     public function update(UpdateCompanyUserRequest $request, User $user)
     {
-        $company = auth()->user()->company();
+        /** @var \App\Models\User $auth_user */
+        $auth_user = auth()->user();
+        $company = $auth_user->company();
 
-        $company_user = CompanyUser::whereUserId($user->id)->whereCompanyId($company->id)->first();
+        $company_user = CompanyUser::query()->where('user_id', $user->id)->where('company_id', $company->id)->first();
 
         if (! $company_user) {
             throw new ModelNotFoundException(ctrans('texts.company_user_not_found'));
@@ -120,11 +123,16 @@ class CompanyUserController extends BaseController
             return;
         }
 
-        if (auth()->user()->isAdmin()) {
+        if ($auth_user->isAdmin()) {
             $company_user->fill($request->input('company_user'));
         } else {
             $company_user->settings = $request->input('company_user')['settings'];
             $company_user->notifications = $request->input('company_user')['notifications'];
+
+            if(isset($request->input('company_user')['react_settings'])) {
+                $company_user->react_settings = $request->input('company_user')['react_settings'];
+            }
+
         }
 
         $company_user->save();
@@ -134,7 +142,11 @@ class CompanyUserController extends BaseController
 
     public function updatePreferences(UpdateCompanyUserPreferencesRequest $request, User $user)
     {
-        $company = auth()->user()->company();
+        /** @var \App\Models\User $auth_user */
+        $auth_user = auth()->user();
+        $company = $auth_user->company();
+
+        $company = $auth_user->company();
 
         $company_user = CompanyUser::whereUserId($user->id)->whereCompanyId($company->id)->first();
 
@@ -143,10 +155,14 @@ class CompanyUserController extends BaseController
             return;
         }
 
+        $this->entity_type = User::class;
+
+        $this->entity_transformer = UserTransformer::class;
+
         $company_user->react_settings = $request->react_settings;
         $company_user->save();
-        
-        return $this->itemResponse($company_user->fresh());
+
+        return $this->itemResponse($user->fresh());
     }
 
 

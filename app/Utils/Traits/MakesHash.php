@@ -24,7 +24,7 @@ trait MakesHash
      * Creates a simple alphanumeric Hash.
      * @return string - asd89f7as89df6asf78as6fds
      */
-    public function createHash() : string
+    public function createHash(): string
     {
         return Str::random(config('ninja.key_length'));
     }
@@ -35,7 +35,7 @@ trait MakesHash
      * @param $db - Full database name
      * @return string 01-asfas8df76a78f6a78dfsdf
      */
-    public function createDbHash($db) : string
+    public function createDbHash($db): string
     {
         if (config('ninja.db.multi_db_enabled')) {
             return  $this->getDbCode($db).'-'.Str::random(config('ninja.key_length'));
@@ -48,22 +48,41 @@ trait MakesHash
      * @param $db - Full database name
      * @return string - hashed and encoded int 01,02,03,04
      */
-    public function getDbCode($db) : string
+    public function getDbCode($db): string
     {
         $hashids = new Hashids(config('ninja.hash_salt'), 10);
 
         return $hashids->encode(str_replace(MultiDB::DB_PREFIX, '', $db));
     }
 
-    public function encodePrimaryKey($value) : string
+    public function encodePrimaryKey($value): string
     {
         $hashids = new Hashids(config('ninja.hash_salt'), 10);
 
         return $hashids->encode($value);
     }
 
-    public function decodePrimaryKey($value) : string
+    public function decodePrimaryKey($value, $return_string_failure = false)
     {
+
+        try {
+            $hashids = new Hashids(config('ninja.hash_salt'), 10);
+
+            $decoded_array = $hashids->decode($value);
+
+            if(isset($decoded_array[0]) ?? false) {
+                return $decoded_array[0];
+            } elseif($return_string_failure) {
+                return "Invalid Primary Key";
+            } else {
+                throw new \Exception('Invalid Primary Key');
+            }
+
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Invalid primary key'], 400);
+        }
+
+        /*
         try {
             $hashids = new Hashids(config('ninja.hash_salt'), 10);
 
@@ -71,13 +90,13 @@ trait MakesHash
 
             if (! is_array($decoded_array)) {
                 throw new \Exception('Invalid Primary Key');
-                //response()->json(['error'=>'Invalid primary key'], 400);
             }
 
             return $decoded_array[0];
         } catch (\Exception $e) {
             return response()->json(['error'=>'Invalid primary key'], 400);
         }
+        */
     }
 
     public function transformKeys($keys)

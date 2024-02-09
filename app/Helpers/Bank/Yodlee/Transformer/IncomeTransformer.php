@@ -131,6 +131,11 @@ class IncomeTransformer implements BankRevenueInterface
                 continue;
             }
 
+            //some object do no store amounts ignore these
+            if(!property_exists($transaction, 'amount')) {
+                continue;
+            }
+
             $data[] = $this->transformTransaction($transaction);
         }
 
@@ -148,7 +153,7 @@ class IncomeTransformer implements BankRevenueInterface
             'category_type' => $transaction->categoryType,
             'date' => $transaction->date,
             'bank_account_id' => $transaction->accountId,
-            'description' => $transaction->description->original,
+            'description' => $transaction?->description?->original ?? '',
             'base_type' => property_exists($transaction, 'baseType') ? $transaction->baseType : $this->calculateBaseType($transaction),
         ];
     }

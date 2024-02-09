@@ -28,13 +28,18 @@ class UpdateQuoteRequest extends Request
      *
      * @return bool
      */
-    public function authorize() : bool
+    public function authorize(): bool
     {
-        return auth()->user()->can('edit', $this->quote);
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        return $user->can('edit', $this->quote);
     }
 
     public function rules()
     {
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
         $rules = [];
 
         if ($this->file('documents') && is_array($this->file('documents'))) {
@@ -49,14 +54,15 @@ class UpdateQuoteRequest extends Request
             $rules['file'] = $this->file_validation;
         }
 
-        
-        if ($this->number) {
-            $rules['number'] = Rule::unique('quotes')->where('company_id', auth()->user()->company()->id)->ignore($this->quote->id);
-        }
+
+        $rules['number'] = ['bail', 'sometimes', 'nullable', Rule::unique('quotes')->where('company_id', $user->company()->id)->ignore($this->quote->id)];
+
+        $rules['client_id'] = ['bail', 'sometimes', Rule::in([$this->quote->client_id])];
 
         $rules['line_items'] = 'array';
         $rules['discount'] = 'sometimes|numeric';
         $rules['is_amount_discount'] = ['boolean'];
+        $rules['exchange_rate'] = 'bail|sometimes|numeric';
 
         return $rules;
     }
@@ -67,6 +73,8 @@ class UpdateQuoteRequest extends Request
 
         $input = $this->decodePrimaryKeys($input);
 
+        $input['id'] = $this->quote->id;
+
         if (isset($input['line_items'])) {
             $input['line_items'] = isset($input['line_items']) ? $this->cleanItems($input['line_items']) : [];
         }
@@ -75,7 +83,10 @@ class UpdateQuoteRequest extends Request
             unset($input['documents']);
         }
 
-        $input['id'] = $this->quote->id;
+        if (array_key_exists('exchange_rate', $input) && is_null($input['exchange_rate'])) {
+            $input['exchange_rate'] = 1;
+        }
+
 
         $this->replace($input);
     }

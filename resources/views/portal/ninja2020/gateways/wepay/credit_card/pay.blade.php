@@ -9,9 +9,9 @@
     <meta name="client-postal-code" content="{{ $contact->client->postal_code }}">
     <meta name="country_code" content="{{$country_code}}">
     <script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
-    <script src="{{ asset('js/clients/payments/card-js.min.js') }}"></script>
 
-    <link href="{{ asset('css/card-js.min.css') }}" rel="stylesheet" type="text/css">
+    <script src="{{ asset('build/public/js/card-js.min.js/card-js.min.js') }}"></script>
+    <link href="{{ asset('build/public/css/card-js.min.css/card-js.min.css') }}" rel="stylesheet" type="text/css">
 
     <script type="text/javascript" src="https://static.wepay.com/min/js/tokenization.4.latest.js"></script>
 @endsection
@@ -72,14 +72,20 @@
 
 @section('gateway_footer')
     <script>
-        Livewire.on('passed-required-fields-check', (event) => {
-            if (event.hasOwnProperty('client_postal_code')) {
-                document.querySelector('meta[name=client-postal-code]').content = event.client_postal_code;
-            }
+
+        document.addEventListener('livewire:init', () => {
+
+            Livewire.on('passed-required-fields-check', (event) => {
+                if (event.hasOwnProperty('client_postal_code')) {
+                    document.querySelector('meta[name=client-postal-code]').content = event.client_postal_code;
+                }
+            });
+
         });
+
     </script>
 
-    <script src="{{ asset('js/clients/payments/wepay-credit-card.js') }}"></script>
+    @vite('resources/js/clients/payments/wepay-credit-card.js')
 @endsection
 
 @push('footer')

@@ -31,7 +31,7 @@ trait ClientGroupSettingsSaver
      * Works for groups|clients|companies
      * @param  array|object $settings The request input settings array
      * @param  object $entity   The entity which the settings belongs to
-     * @return void
+     * @return array|object
      */
     public function saveSettings($settings, $entity)
     {
@@ -84,6 +84,12 @@ trait ClientGroupSettingsSaver
 
         if (property_exists($settings, 'translations')) {
             unset($settings->translations);
+        }
+
+        foreach(['translations','pdf_variables'] as $key) {
+            if (property_exists($settings, $key)) {
+                unset($settings->{$key});
+            }
         }
 
         //18-07-2022 removed || empty($settings->{$key}) from this check to allow "0" values to persist
@@ -150,7 +156,7 @@ trait ClientGroupSettingsSaver
      * @param  array $settings The settings request() array
      * @return stdClass          stdClass object
      */
-    private function checkSettingType($settings) : stdClass
+    private function checkSettingType($settings): stdClass
     {
         $settings = (object) $settings;
         $casts = CompanySettings::$casts;
@@ -210,7 +216,7 @@ trait ClientGroupSettingsSaver
      * @param  string $value The object property
      * @return bool        TRUE if the property is the expected type
      */
-    private function checkAttribute($key, $value) :bool
+    private function checkAttribute($key, $value): bool
     {
         switch ($key) {
             case 'int':

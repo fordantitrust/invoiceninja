@@ -25,7 +25,11 @@ use Illuminate\Queue\SerializesModels;
 
 class PaymentIntentFailureWebhook implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, Utilities;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
+    use Utilities;
 
     public $tries = 1; //number of retries
 
@@ -50,7 +54,7 @@ class PaymentIntentFailureWebhook implements ShouldQueue
     {
         MultiDB::findAndSetDbByCompanyKey($this->company_key);
 
-        $company = Company::where('company_key', $this->company_key)->first();
+        $company = Company::query()->where('company_key', $this->company_key)->first();
 
         foreach ($this->stripe_request as $transaction) {
             if (array_key_exists('payment_intent', $transaction)) {
@@ -78,7 +82,7 @@ class PaymentIntentFailureWebhook implements ShouldQueue
                 $payment->status_id = Payment::STATUS_FAILED;
                 $payment->save();
 
-                $payment_hash = PaymentHash::where('payment_id', $payment->id)->first();
+                $payment_hash = PaymentHash::query()->where('payment_id', $payment->id)->first();
 
                 if ($payment_hash) {
                     $error = ctrans('texts.client_payment_failure_body', [

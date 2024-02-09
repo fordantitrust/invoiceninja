@@ -13,17 +13,14 @@ namespace App\Models;
 
 use App\Helpers\Invoice\InvoiceSum;
 use App\Helpers\Invoice\InvoiceSumInclusive;
-use App\Jobs\Entity\CreateEntityPdf;
 use App\Models\Presenters\QuotePresenter;
 use App\Services\Quote\QuoteService;
-use App\Utils\Ninja;
 use App\Utils\Traits\MakesDates;
 use App\Utils\Traits\MakesHash;
 use App\Utils\Traits\MakesInvoiceValues;
 use App\Utils\Traits\MakesReminders;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Storage;
 use Laracasts\Presenter\PresentableTrait;
 
 /**
@@ -43,10 +40,11 @@ use Laracasts\Presenter\PresentableTrait;
  * @property string|null $number
  * @property float $discount
  * @property bool $is_amount_discount
+ * @property bool $auto_bill_enabled
  * @property string|null $po_number
  * @property string|null $date
  * @property string|null $last_sent_date
- * @property string|null $due_date
+ * @property string|null|Carbon $due_date
  * @property string|null $next_send_date
  * @property bool $is_deleted
  * @property object|null $line_items
@@ -90,102 +88,27 @@ use Laracasts\Presenter\PresentableTrait;
  * @property string|null $reminder_last_sent
  * @property string $paid_to_date
  * @property int|null $subscription_id
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read int|null $activities_count
- * @property-read \App\Models\User|null $assigned_user
- * @property-read \App\Models\Client $client
- * @property-read \App\Models\Company $company
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read int|null $documents_count
+ * @property \App\Models\User|null $assigned_user
+ * @property \App\Models\Client $client
+ * @property \App\Models\Company $company
+ * @property \App\Models\QuoteInvitation $invitation
  * @property-read mixed $balance_due
  * @property-read mixed $hashed_id
  * @property-read mixed $total
  * @property-read mixed $valid_until
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Backup> $history
- * @property-read int|null $history_count
  * @property-read int|null $invitations_count
  * @property-read \App\Models\Invoice|null $invoice
  * @property-read \App\Models\QuoteInvitation|null $invitations
  * @property-read \App\Models\Project|null $project
  * @property-read \App\Models\User $user
  * @property-read \App\Models\Vendor|null $vendor
- * @method static \Illuminate\Database\Eloquent\Builder|BaseModel company()
- * @method static \Illuminate\Database\Eloquent\Builder|BaseModel exclude($columns)
- * @method static \Database\Factories\QuoteFactory factory($count = null, $state = [])
- * @method static \Illuminate\Database\Eloquent\Builder|Quote filter(\App\Filters\QueryFilters $filters)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote newModelQuery()
- * @method static \Illuminate\Database\Eloquent\Builder|Quote newQuery()
- * @method static \Illuminate\Database\Eloquent\Builder|Quote onlyTrashed()
- * @method static \Illuminate\Database\Eloquent\Builder|Quote query()
- * @method static \Illuminate\Database\Eloquent\Builder|BaseModel scope()
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereAmount($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereAssignedUserId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereBackup($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereBalance($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereClientId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereCompanyId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereCreatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereCustomSurcharge1($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereCustomSurcharge2($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereCustomSurcharge3($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereCustomSurcharge4($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereCustomSurchargeTax1($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereCustomSurchargeTax2($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereCustomSurchargeTax3($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereCustomSurchargeTax4($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereCustomValue1($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereCustomValue2($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereCustomValue3($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereCustomValue4($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereDate($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereDeletedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereDesignId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereDiscount($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereDueDate($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereExchangeRate($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereFooter($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereInvoiceId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereIsAmountDiscount($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereIsDeleted($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereLastSentDate($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereLastViewed($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereLineItems($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereNextSendDate($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereNumber($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote wherePaidToDate($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote wherePartial($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote wherePartialDueDate($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote wherePoNumber($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote wherePrivateNotes($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereProjectId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote wherePublicNotes($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereRecurringId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereReminder1Sent($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereReminder2Sent($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereReminder3Sent($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereReminderLastSent($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereStatusId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereSubscriptionId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereTaxName1($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereTaxName2($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereTaxName3($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereTaxRate1($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereTaxRate2($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereTaxRate3($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereTerms($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereTotalTaxes($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereUpdatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereUserId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereUsesInclusiveTaxes($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote whereVendorId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|Quote withTrashed()
- * @method static \Illuminate\Database\Eloquent\Builder|Quote withoutTrashed()
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Backup> $history
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\QuoteInvitation> $invitations
+ * @method static \Illuminate\Database\Eloquent\Builder|BaseModel company()
  * @mixin \Eloquent
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class Quote extends BaseModel
 {
@@ -241,7 +164,7 @@ class Quote extends BaseModel
 
     protected $casts = [
         // 'date' => 'date:Y-m-d',
-        // 'due_date' => 'date:Y-m-d',
+        'due_date' => 'date:Y-m-d',
         // 'partial_due_date' => 'date:Y-m-d',
         'line_items' => 'object',
         'backup' => 'object',
@@ -252,15 +175,15 @@ class Quote extends BaseModel
         'is_amount_discount' => 'bool',
     ];
 
-    const STATUS_DRAFT = 1;
+    public const STATUS_DRAFT = 1;
 
-    const STATUS_SENT = 2;
+    public const STATUS_SENT = 2;
 
-    const STATUS_APPROVED = 3;
+    public const STATUS_APPROVED = 3;
 
-    const STATUS_CONVERTED = 4;
+    public const STATUS_CONVERTED = 4;
 
-    const STATUS_EXPIRED = -1;
+    public const STATUS_EXPIRED = -1;
 
     public function getEntityType()
     {
@@ -274,7 +197,7 @@ class Quote extends BaseModel
 
     public function getDueDateAttribute($value)
     {
-        return $this->dateMutator($value);
+        return $value ? $this->dateMutator($value) : null;
     }
 
     public function getPartialDueDateAttribute($value)
@@ -291,57 +214,63 @@ class Quote extends BaseModel
         return $value;
     }
 
-    public function company()
+    public function company(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Company::class);
     }
 
-    public function vendor()
+    public function vendor(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Vendor::class);
     }
 
-    public function history()
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasManyThrough<Backup>
+     */
+    public function history(): \Illuminate\Database\Eloquent\Relations\HasManyThrough
     {
         return $this->hasManyThrough(Backup::class, Activity::class);
     }
 
-    public function activities()
+    public function activities(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Activity::class)->orderBy('id', 'DESC')->take(50);
     }
 
-    public function user()
+    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class)->withTrashed();
     }
 
-    public function client()
+    public function client(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Client::class)->withTrashed();
     }
 
-    public function invoice()
+    public function invoice(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Invoice::class)->withTrashed();
     }
 
-    public function assigned_user()
+    public function assigned_user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_user_id', 'id')->withTrashed();
     }
 
-    public function project()
+    public function project(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Project::class)->withTrashed();
     }
 
-    public function invitations()
+    public function invitations(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(QuoteInvitation::class);
     }
 
-    public function documents()
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\MorphMany<Document>
+     */
+    public function documents(): \Illuminate\Database\Eloquent\Relations\MorphMany
     {
         return $this->morphMany(Document::class, 'documentable');
     }
@@ -382,51 +311,6 @@ class Quote extends BaseModel
         return new QuoteService($this);
     }
 
-    public function pdf_file_path($invitation = null, string $type = 'path', bool $portal = false)
-    {
-        if (! $invitation) {
-            if ($this->invitations()->exists()) {
-                $invitation = $this->invitations()->first();
-            } else {
-                $this->service()->createInvitations();
-                $invitation = $this->invitations()->first();
-            }
-        }
-
-        if (! $invitation) {
-            throw new \Exception('Hard fail, could not create an invitation - is there a valid contact?');
-        }
-
-        $file_path = $this->client->quote_filepath($invitation).$this->numberFormatter().'.pdf';
-
-        if (Ninja::isHosted() && $portal && Storage::disk(config('filesystems.default'))->exists($file_path)) {
-            return Storage::disk(config('filesystems.default'))->{$type}($file_path);
-        } elseif (Ninja::isHosted() && $portal) {
-            $file_path = (new CreateEntityPdf($invitation, config('filesystems.default')))->handle();
-            return Storage::disk(config('filesystems.default'))->{$type}($file_path);
-        }
-
-        $file_exists = false;
-
-        try {
-            $file_exists = Storage::disk(config('filesystems.default'))->exists($file_path);
-        } catch (\Exception $e) {
-            nlog($e->getMessage());
-        }
-
-        if ($file_exists) {
-            return Storage::disk(config('filesystems.default'))->{$type}($file_path);
-        }
-
-        if (Storage::disk('public')->exists($file_path)) {
-            return Storage::disk('public')->{$type}($file_path);
-        }
-
-        $file_path = (new CreateEntityPdf($invitation))->handle();
-
-        return Storage::disk('public')->{$type}($file_path);
-    }
-
     /**
      * @param int $status
      * @return string
@@ -455,7 +339,7 @@ class Quote extends BaseModel
             case self::STATUS_DRAFT:
                 return ctrans('texts.draft');
             case self::STATUS_SENT:
-                return ctrans('texts.pending');
+                return ctrans('texts.sent');
             case self::STATUS_APPROVED:
                 return ctrans('texts.approved');
             case self::STATUS_EXPIRED:
@@ -473,7 +357,7 @@ class Quote extends BaseModel
      *
      * @return bool
      */
-    public function isApproved()
+    public function isApproved(): bool
     {
         if ($this->status_id === $this::STATUS_APPROVED) {
             return true;
@@ -497,11 +381,11 @@ class Quote extends BaseModel
         return $this->calc()->getTotal();
     }
 
-    public function translate_entity()
+    public function translate_entity(): string
     {
         return ctrans('texts.quote');
     }
-    
+
     /**
      * calculateTemplate
      *

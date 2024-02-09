@@ -21,12 +21,13 @@ class TaskStatusRepository extends BaseRepository
 {
     public function delete($task_status)
     {
-        $ts = TaskStatus::where('company_id', $task_status->company_id)
+        /** @var \App\Models\TaskStatus $ts **/
+        $ts = TaskStatus::query()->where('company_id', $task_status->company_id)
                                  ->first();
 
         $new_status = $ts ? $ts->id : null;
 
-        Task::where('status_id', $task_status->id)
+        Task::query()->where('status_id', $task_status->id)
         ->where('company_id', $task_status->company_id)
         ->update(['status_id' => $new_status]);
 
@@ -38,13 +39,15 @@ class TaskStatusRepository extends BaseRepository
 
     public function archive($task_status)
     {
-        $task_status = TaskStatus::where('id', $task_status->id)
+        $task_status = TaskStatus::withTrashed()
+                                 ->where('id', $task_status->id)
                                  ->where('company_id', $task_status->company_id)
                                  ->first();
 
         $new_status = $task_status ? $task_status->id : null;
-        
-        Task::where('status_id', $task_status->id)
+
+        Task::withTrashed()
+            ->where('status_id', $task_status->id)
             ->where('company_id', $task_status->company_id)
             ->update(['status_id' => $new_status]);
 
@@ -57,28 +60,28 @@ class TaskStatusRepository extends BaseRepository
     public function reorder(TaskStatus $task_status)
     {
 
-        TaskStatus::where('company_id', $task_status->company_id)
+        TaskStatus::query()->where('company_id', $task_status->company_id)
                     ->where('id', '!=', $task_status->id)
                     ->orderByRaw('ISNULL(status_order), status_order ASC')
                     ->cursor()
-                    ->each(function ($ts, $key) use($task_status){
-                    
+                    ->each(function ($ts, $key) use ($task_status) {
+
                         if($ts->status_order < $task_status->status_order) {
                             $ts->status_order--;
                             $ts->save();
                         } elseif($ts->status_order >= $task_status->status_order) {
-                            $ts->status_order ++;
+                            $ts->status_order++;
                             $ts->save();
                         }
-                    
+
                     });
 
 
-        TaskStatus::where('company_id', $task_status->company_id)
+        TaskStatus::query()->where('company_id', $task_status->company_id)
                 ->orderByRaw('ISNULL(status_order), status_order ASC')
                 ->cursor()
                 ->each(function ($ts, $key) {
-                    $ts->status_order = $key+1;
+                    $ts->status_order = $key + 1;
                     $ts->save();
                 });
 

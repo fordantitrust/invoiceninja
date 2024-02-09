@@ -20,9 +20,12 @@ class ShowDocumentRequest extends Request
      *
      * @return bool
      */
-    public function authorize() : bool
+    public function authorize(): bool
     {
-        return auth()->user()->can('view', $this->document);
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        return $user->can('view', $this->document);
     }
 
     /**

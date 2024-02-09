@@ -23,14 +23,14 @@ class GroupSettingTransformer extends EntityTransformer
 {
     use MakesHash;
 
-    protected $defaultIncludes = [
+    protected array $defaultIncludes = [
         'documents',
     ];
 
     /**
      * @var array
      */
-    protected $availableIncludes = [
+    protected array $availableIncludes = [
     ];
 
     /**
@@ -42,7 +42,7 @@ class GroupSettingTransformer extends EntityTransformer
         return [
             'id' => $this->encodePrimaryKey($group_setting->id),
             'name' => (string) $group_setting->name ?: '',
-            'settings' => $group_setting->settings ?: new stdClass,
+            'settings' => $group_setting->settings ?: new stdClass(),
             'created_at' => (int) $group_setting->created_at,
             'updated_at' => (int) $group_setting->updated_at,
             'archived_at' => (int) $group_setting->deleted_at,

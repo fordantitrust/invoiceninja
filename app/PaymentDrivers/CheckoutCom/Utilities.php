@@ -60,7 +60,7 @@ trait Utilities
 
         $data = [
             'payment_method' => $_payment['source']['id'],
-            'payment_type' => 12,
+            'payment_type' => \App\Models\PaymentType::CREDIT_CARD_OTHER,
             'amount' => $this->getParent()->payment_hash->data->raw_value,
             'transaction_reference' => $_payment['id'],
             'gateway_type_id' => GatewayType::CREDIT_CARD,
@@ -86,12 +86,19 @@ trait Utilities
 
         nlog("checkout failure");
         nlog($_payment);
-        
+
         if (is_array($_payment) && array_key_exists('status', $_payment)) {
             $error_message = $_payment['status'];
         } else {
             $error_message = 'Error processing payment.';
         }
+
+        if(isset($_payment['actions'][0]['response_summary']) ?? false) {
+            $error_message = $_payment['actions'][0]['response_summary'];
+        }
+
+        //checkout does not return a integer status code as an alias for a http status code.
+        $error_code = 400;
 
         $this->getParent()->sendFailureMail($error_message);
 
@@ -110,7 +117,7 @@ trait Utilities
         );
 
         if ($throw_exception) {
-            throw new PaymentFailed($error_message, 500);
+            throw new PaymentFailed($error_message, $error_code);
         }
     }
 
@@ -126,7 +133,7 @@ trait Utilities
     private function storeLocalPaymentMethod($response)
     {
         try {
-            $payment_meta = new stdClass;
+            $payment_meta = new stdClass();
             $payment_meta->exp_month = (string) $response['source']['expiry_month'];
             $payment_meta->exp_year = (string) $response['source']['expiry_year'];
             $payment_meta->brand = (string) $response['source']['scheme'];

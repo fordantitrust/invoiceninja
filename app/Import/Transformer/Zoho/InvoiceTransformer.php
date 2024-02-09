@@ -60,7 +60,7 @@ class InvoiceTransformer extends BaseTransformer
         $line_items = [];
         foreach ($line_items_data as $record) {
             $item_notes_key = array_key_exists('Item Description', $record) ? 'Item Description' : 'Item Desc';
-            
+
             $line_items[] = [
                 'product_key'        => $this->getString($record, 'Item Name'),
                 'notes'              => $this->getString($record, $item_notes_key),
@@ -102,7 +102,7 @@ class InvoiceTransformer extends BaseTransformer
         $client_name = $this->getString($invoice_data, 'Customer Name');
 
         if(strlen($client_name) >= 2) {
-            $client_name_search = \App\Models\Client::where('company_id', $this->company->id)
+            $client_name_search = \App\Models\Client::query()->where('company_id', $this->company->id)
                 ->where('is_deleted', false)
                 ->whereRaw("LOWER(REPLACE(`name`, ' ' ,''))  = ?", [
                     strtolower(str_replace(' ', '', $client_name)),
@@ -115,7 +115,7 @@ class InvoiceTransformer extends BaseTransformer
 
         $customer_id = $this->getString($invoice_data, 'Customer ID');
 
-        $client_id_search = \App\Models\Client::where('company_id', $this->company->id)
+        $client_id_search = \App\Models\Client::query()->where('company_id', $this->company->id)
             ->where('is_deleted', false)
             ->where('id_number', trim($customer_id));
 
@@ -141,7 +141,6 @@ class InvoiceTransformer extends BaseTransformer
                 'postal_code' => $this->getString($invoice_data, 'Billing Code'),
                 'country_id' => $this->getCountryId($this->getString($invoice_data, 'Billing Country')),
             ],
-
             \App\Factory\ClientFactory::create(
                 $this->company->id,
                 $this->company->owner()->id
@@ -149,7 +148,7 @@ class InvoiceTransformer extends BaseTransformer
         );
 
         $client_repository = null;
-                
+
         return $client->id;
 
     }

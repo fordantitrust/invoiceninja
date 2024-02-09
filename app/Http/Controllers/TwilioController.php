@@ -21,6 +21,11 @@ use Twilio\Rest\Client;
 
 class TwilioController extends BaseController
 {
+    private array $invalid_codes = [
+        '+21',
+        '+17152567760',
+    ];
+
     public function __construct()
     {
         parent::__construct();
@@ -29,11 +34,22 @@ class TwilioController extends BaseController
     /**
      * Display a listing of the resource.
      *
-     * @return void
+     * @return \Illuminate\Http\JsonResponse;
      */
     public function generate(GenerateSmsRequest $request)
     {
-        $account = auth()->user()->company()->account;
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        if(!$user->email_verified_at) {
+            return response()->json(['message' => 'Please verify your email address before verifying your phone number'], 400);
+        }
+
+        $account = $user->company()->account;
+
+        if(!$this->checkPhoneValidity($request->phone)) {
+            return response()->json(['message' => 'This phone number is not supported'], 400);
+        }
 
         if (MultiDB::hasPhoneNumber($request->phone)) {
             return response()->json(['message' => 'This phone number has already been verified with another account'], 400);
@@ -62,14 +78,30 @@ class TwilioController extends BaseController
         return response()->json(['message' => 'Code sent.'], 200);
     }
 
+    private function checkPhoneValidity($phone)
+    {
+        foreach($this->invalid_codes as $code) {
+
+            if(stripos($phone, $code) !== false) {
+                return false;
+            }
+
+            return true;
+
+        }
+    }
+
     /**
      * Show the form for creating a new resource.
      *
-     * @return void
+     * @return \Illuminate\Http\JsonResponse;
      */
     public function confirm(ConfirmSmsRequest $request)
     {
-        $account = auth()->user()->company()->account;
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        $account = $user->company()->account;
 
         $sid = config('ninja.twilio_account_sid');
         $token = config('ninja.twilio_auth_token');
@@ -84,14 +116,15 @@ class TwilioController extends BaseController
                                              "to" => $account->account_sms_verification_number,
                                              "code" => $request->code
                                        ]);
-        
+
 
         if ($verification_check->status == 'approved') {
             $account->account_sms_verified = true;
             $account->save();
 
-            //on confirmation we set the users phone number.
+            /** @var \App\Models\User $user */
             $user = auth()->user();
+
             $user->phone = $account->account_sms_verification_number;
             $user->verified_phone_number = true;
             $user->save();
@@ -103,12 +136,33 @@ class TwilioController extends BaseController
         return response()->json(['message' => 'SMS not verified'], 400);
     }
 
+    /**
+     * generate2faResetCode
+     *
+     * @return \Illuminate\Http\JsonResponse;
+     */
     public function generate2faResetCode(Generate2faRequest $request)
     {
+        nlog($request->all());
+        nlog($request->headers());
+
         $user = User::where('email', $request->email)->first();
 
         if (!$user) {
             return response()->json(['message' => 'Unable to retrieve user.'], 400);
+        }
+
+        if(!$user->email_verified_at) {
+            return response()->json(['message' => 'Please verify your email address before verifying your phone number'], 400);
+        }
+
+
+        if(!$user->first_name || !$user->last_name) {
+            return response()->json(['message' => 'Please update your first and/or last name in the User Details before verifying your number.'], 400);
+        }
+
+        if (!$user->phone || $user->phone == '') {
+            return response()->json(['message' => 'User found, but no valid phone number on file, please contact support.'], 400);
         }
 
         $sid = config('ninja.twilio_account_sid');
@@ -132,6 +186,12 @@ class TwilioController extends BaseController
         return response()->json(['message' => 'Code sent.'], 200);
     }
 
+    /**
+     * confirm2faResetCode
+     *
+     * @param  Confirm2faRequest $request
+     * @return \Illuminate\Http\JsonResponse;
+     */
     public function confirm2faResetCode(Confirm2faRequest $request)
     {
         $user = User::where('email', $request->email)->first();
@@ -153,7 +213,7 @@ class TwilioController extends BaseController
                                              "to" => $user->phone,
                                              "code" => $request->code
                                        ]);
-        
+
         if ($verification_check->status == 'approved') {
             if ($request->query('validate_only') == 'true') {
                 $user->verified_phone_number = true;
@@ -171,16 +231,16 @@ class TwilioController extends BaseController
         return response()->json(['message' => 'SMS not verified.'], 400);
     }
 
-    public function validatePhoneNumber()
-    {
-        $sid = config('ninja.twilio_account_sid');
-        $token = config('ninja.twilio_auth_token');
+    // public function validatePhoneNumber()
+    // {
+    //     $sid = config('ninja.twilio_account_sid');
+    //     $token = config('ninja.twilio_auth_token');
 
-        $twilio = new Client($sid, $token);
+    //     $twilio = new Client($sid, $token);
 
-        $phone_number = $twilio->lookups->v1->phoneNumbers("0417918829")
-                                            ->fetch(["countryCode" => "AU"]);
+    //     $phone_number = $twilio->lookups->v1->phoneNumbers("0417918829")
+    //                                         ->fetch(["countryCode" => "AU"]);
 
-        print($phone_number);
-    }
+    //     print($phone_number);
+    // }
 }

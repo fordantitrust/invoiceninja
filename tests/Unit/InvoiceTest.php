@@ -11,15 +11,15 @@
 
 namespace Tests\Unit;
 
-use Tests\TestCase;
-use App\Models\Invoice;
-use Tests\MockAccountData;
 use App\DataMapper\InvoiceItem;
 use App\Factory\InvoiceFactory;
 use App\Factory\InvoiceItemFactory;
 use App\Helpers\Invoice\InvoiceSum;
 use App\Helpers\Invoice\InvoiceSumInclusive;
+use App\Models\Invoice;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Tests\MockAccountData;
+use Tests\TestCase;
 
 /**
  * @test
@@ -47,6 +47,111 @@ class InvoiceTest extends TestCase
         $this->invoice->uses_inclusive_taxes = true;
 
         $this->invoice_calc = new InvoiceSum($this->invoice);
+    }
+
+    public function testPartialDueDateCast()
+    {
+        $i = Invoice::factory()
+        ->create([
+            'company_id' => $this->company->id,
+            'user_id' => $this->user->id,
+            'client_id' => $this->client->id
+        ]);
+
+        $this->assertNull($i->partial_due_date);
+
+        $i = Invoice::factory()
+        ->create([
+            'company_id' => $this->company->id,
+            'user_id' => $this->user->id,
+            'client_id' => $this->client->id,
+            'partial_due_date' => '2023-10-10',
+        ]);
+
+        $this->assertEquals('2023-10-10', $i->partial_due_date->format('Y-m-d'));
+    }
+   
+    public function testMarkPaidWithPartial()
+    {
+        $item = InvoiceItemFactory::create();
+        $item->quantity = 1;
+        $item->cost = 50;
+        $line_items[] = $item;
+
+        $this->invoice->partial = 5;
+        $this->invoice->partial_due_date = now()->addDay();
+        $this->invoice->due_date = now()->addDays(10);
+        $this->invoice->line_items = $line_items;
+        $this->invoice->save();
+
+        $invoice_calc = new InvoiceSum($this->invoice);
+
+        /** @var \App\Models\Invoice $ii */
+        $ii = $invoice_calc->build()->getInvoice();
+        $invoice = $ii->service()->markSent()->save();
+
+        $this->assertEquals(5, $invoice->partial);
+        $this->assertNotNull($invoice->partial_due_date);
+        $this->assertEquals(50, $invoice->amount);
+
+        $invoice = $invoice->service()->markPaid()->save();
+
+        $this->assertEquals(0, $invoice->partial);
+        $this->assertEquals(0, $invoice->balance);
+
+        $this->assertNull($invoice->partial_due_date);
+    }
+
+    public function testGrossTaxAmountCalcuations()
+    {
+        $invoice = InvoiceFactory::create($this->company->id, $this->user->id);
+        $invoice->client_id = $this->client->id;
+        $invoice->uses_inclusive_taxes = false;
+        $invoice->discount = 14191;
+        $invoice->is_amount_discount = true;
+        $invoice->status_id = 2;
+        $line_items = [];
+              
+        $line_item = new InvoiceItem;
+        $line_item->quantity = 1;
+        $line_item->cost = 8000;
+        $line_item->tax_rate1 = 5;
+        $line_item->tax_name1 = 'CA';
+        $line_item->product_key = 'line1';
+        $line_item->notes = 'Test';
+        $line_item->tax_id = 1;
+        $line_items[] = $line_item;
+
+        $line_item = new InvoiceItem;
+        $line_item->quantity = 1;
+        $line_item->cost = 9500;
+        $line_item->tax_rate1 = 5;
+        $line_item->tax_name1 = 'CA';
+        $line_item->product_key = 'line2';
+        $line_item->notes = 'Test';
+        $line_item->tax_id = 1;
+
+        $line_items[] = $line_item;
+
+        $invoice->line_items = $line_items;
+        $invoice->save();
+
+        $calc = $invoice->calc();
+        $invoice = $calc->getInvoice();
+
+        $this->assertEquals(3474.45, $invoice->amount);
+        $this->assertEquals(14191, $invoice->discount);
+        $this->assertEquals(165.45, $invoice->total_taxes);
+
+        $item = collect($invoice->line_items)->firstWhere('product_key', 'line1');
+        $this->assertEquals(75.63, $item->tax_amount);
+        $this->assertEquals(8075.63, $item->gross_line_total);
+
+        $item = collect($invoice->line_items)->firstWhere('product_key', 'line2');
+        $this->assertEquals(89.82, $item->tax_amount);
+        $this->assertEquals(9589.82, $item->gross_line_total);
+
+
     }
 
     public function testTaskRoundingPrecisionThree()
@@ -107,7 +212,7 @@ class InvoiceTest extends TestCase
 
         $invoice = $invoice->calc()->getInvoice();
 
-        $this->assertEquals(57.90, $invoice->amount);
+        $this->assertEquals(57.92, $invoice->amount);
 
     }
 

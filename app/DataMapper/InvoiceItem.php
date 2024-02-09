@@ -44,7 +44,7 @@ class InvoiceItem
     public $line_total = 0;
 
     public $gross_line_total = 0;
-    
+
     public $tax_amount = 0;
 
     public $date = '';
@@ -61,8 +61,13 @@ class InvoiceItem
 
     public $tax_id = '';
 
+    public $task_id = '';
+
+    public $expense_id = '';
 
     public static $casts = [
+        'task_id' => 'string',
+        'expense_id' => 'string',
         'tax_id' => 'string',
         'type_id' => 'string',
         'quantity' => 'float',

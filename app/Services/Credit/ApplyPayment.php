@@ -40,7 +40,7 @@ class ApplyPayment
         $this->payment = $payment->fresh();
     }
 
-    public function run() :Credit
+    public function run(): Credit
     {
         //$available_credit_balance = $this->credit->balance;
         $applicable_amount = min($this->amount, $this->credit->balance);
@@ -86,7 +86,7 @@ class ApplyPayment
 
     private function applyPaymentToCredit()
     {
-        $credit_item = new InvoiceItem;
+        $credit_item = new InvoiceItem();
         $credit_item->type_id = '1';
         $credit_item->product_key = ctrans('texts.credit');
         $credit_item->notes = ctrans('texts.credit_payment', ['invoice_number' => $this->invoice->number]);
@@ -137,7 +137,7 @@ class ApplyPayment
                  ->updateBalance($this->amount_applied * -1)
                  ->updatePaidToDate($this->amount_applied)
                  ->updateStatus()
-                 ->touchPdf()
+                //  ->deletePdf()
                  ->save();
 
         $this->credit
@@ -147,7 +147,7 @@ class ApplyPayment
         event(new InvoiceWasUpdated($this->invoice, $this->invoice->company, Ninja::eventVars(auth()->user() ? auth()->user()->id : null)));
 
         if ((int) $this->invoice->balance == 0) {
-            $this->invoice->service()->touchPdf();
+            // $this->invoice->service()->deletePdf();
             $this->invoice = $this->invoice->fresh();
             event(new InvoiceWasPaid($this->invoice, $this->payment, $this->payment->company, Ninja::eventVars(auth()->user() ? auth()->user()->id : null)));
         }

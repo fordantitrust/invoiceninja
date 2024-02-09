@@ -17,7 +17,6 @@ use App\Services\AbstractService;
 
 class ApplyPayment extends AbstractService
 {
-
     public function __construct(private Invoice $invoice, private Payment $payment, private float $payment_amount)
     {
     }
@@ -35,37 +34,40 @@ class ApplyPayment extends AbstractService
 
                 $amount_paid = $this->payment_amount * -1;
 
-                $this->invoice->service()->clearPartial()->setDueDate()->setStatus(Invoice::STATUS_PARTIAL)->updateBalance($amount_paid)->save();
+                $this->invoice->service()->clearPartial()->setDueDate()->setStatus(Invoice::STATUS_PARTIAL)->updateBalance($amount_paid)->updatePaidToDate($amount_paid * -1)->save();
             } elseif ($this->invoice->partial > 0 && $this->invoice->partial > $this->payment_amount) {
                 //partial amount exists, but the amount is less than the partial amount
 
                 $amount_paid = $this->payment_amount * -1;
 
-                $this->invoice->service()->updatePartial($amount_paid)->updateBalance($amount_paid)->save();
+                $this->invoice->service()->updatePartial($amount_paid)->updateBalance($amount_paid)->updatePaidToDate($amount_paid * -1)->save();
             } elseif ($this->invoice->partial > 0 && $this->invoice->partial < $this->payment_amount) {
                 //partial exists and the amount paid is GREATER than the partial amount
 
                 $amount_paid = $this->payment_amount * -1;
 
-                $this->invoice->service()->clearPartial()->setDueDate()->setStatus(Invoice::STATUS_PARTIAL)->updateBalance($amount_paid)->save();
+                $this->invoice->service()->clearPartial()->setDueDate()->setStatus(Invoice::STATUS_PARTIAL)->updateBalance($amount_paid)->updatePaidToDate($amount_paid * -1)->save();
             }
+
+            $this->invoice->service()->checkReminderStatus()->save();
+
         } else {
             if ($this->payment_amount == $this->invoice->balance) {
                 $amount_paid = $this->payment_amount * -1;
 
-                $this->invoice->service()->clearPartial()->setStatus(Invoice::STATUS_PAID)->updateBalance($amount_paid)->save();
+                $this->invoice->service()->clearPartial()->setStatus(Invoice::STATUS_PAID)->updateBalance($amount_paid)->updatePaidToDate($amount_paid * -1)->save();
             } elseif ($this->payment_amount < $this->invoice->balance) {
                 //partial invoice payment made
 
                 $amount_paid = $this->payment_amount * -1;
 
-                $this->invoice->service()->clearPartial()->setStatus(Invoice::STATUS_PARTIAL)->updateBalance($amount_paid)->save();
+                $this->invoice->service()->clearPartial()->setStatus(Invoice::STATUS_PARTIAL)->updateBalance($amount_paid)->updatePaidToDate($amount_paid * -1)->save();
             } elseif ($this->payment_amount > $this->invoice->balance) {
                 //partial invoice payment made
 
                 $amount_paid = $this->invoice->balance * -1;
 
-                $this->invoice->service()->clearPartial()->setStatus(Invoice::STATUS_PAID)->updateBalance($amount_paid)->save();
+                $this->invoice->service()->clearPartial()->setStatus(Invoice::STATUS_PAID)->updateBalance($amount_paid)->updatePaidToDate($amount_paid * -1)->save();
             }
         }
 
@@ -73,26 +75,17 @@ class ApplyPayment extends AbstractService
              ->ledger()
              ->updatePaymentBalance($amount_paid);
 
-        // nlog("updating client balance by amount {$amount_paid}");
-
         $this->invoice
              ->client
              ->service()
              ->updateBalance($amount_paid)
              ->save();
 
-        /* Update Pivot Record amount */
-        $this->payment->invoices->each(function ($inv) use ($amount_paid) {
-            if ($inv->id == $this->invoice->id) {
-                $inv->pivot->amount = ($amount_paid * -1);
-                $inv->pivot->save();
-
-                $inv->paid_to_date += floatval($amount_paid * -1);
-                $inv->save();
-            }
-        });
-
-        $this->invoice->service()->applyNumber()->workFlow()->touchPdf()->save();
+        $this->invoice
+             ->service()
+             ->applyNumber()
+             ->workFlow()
+             ->save();
 
         return $this->invoice;
     }

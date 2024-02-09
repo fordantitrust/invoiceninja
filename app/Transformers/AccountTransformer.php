@@ -28,7 +28,7 @@ class AccountTransformer extends EntityTransformer
     /**
      * @var array
      */
-    protected $defaultIncludes = [
+    protected array $defaultIncludes = [
         //'default_company',
         //'user',
         //'company_users'
@@ -37,7 +37,7 @@ class AccountTransformer extends EntityTransformer
     /**
      * @var array
      */
-    protected $availableIncludes = [
+    protected array $availableIncludes = [
         'default_company',
         'company_users',
         'companies',
@@ -61,7 +61,7 @@ class AccountTransformer extends EntityTransformer
             'plan_paid' => (string) $account->plan_paid,
             'plan_expires' => (string) $account->plan_expires,
             'user_agent' => (string) $account->user_agent,
-            'payment_id' => (string) $account->payment_id,
+            'payment_id' => (string) $this->encodePrimaryKey($account->payment_id),
             'trial_started' => (string) $account->trial_started,
             'trial_plan' => (string) $account->trial_plan,
             'plan_price' => (float) $account->plan_price,
@@ -91,7 +91,8 @@ class AccountTransformer extends EntityTransformer
             'trial_days_left' => Ninja::isHosted() ? (int) $account->getTrialDays() : 0,
             'account_sms_verified' => (bool) $account->account_sms_verified,
             'has_iap_plan' => (bool)$account->inapp_transaction_id,
-
+            'tax_api_enabled' => (bool) config('services.tax.zip_tax.key') ? true : false,
+            'nordigen_enabled' => (bool) (config('ninja.nordigen.secret_id') && config('ninja.nordigen.secret_key')) ? true : false
         ];
     }
 

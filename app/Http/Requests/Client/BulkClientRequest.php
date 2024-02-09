@@ -24,17 +24,24 @@ class BulkClientRequest extends Request
      *
      * @return bool
      */
-    public function authorize() : bool
+    public function authorize(): bool
     {
         return true;
     }
 
     public function rules()
     {
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
         return [
-            'ids' => ['required','bail','array',Rule::exists('clients', 'id')->where('company_id', auth()->user()->company()->id)],
-            'action' => 'in:archive,restore,delete'
+            'action' => 'required|string|in:archive,restore,delete,template',
+            'ids' => ['required','bail','array',Rule::exists('clients', 'id')->where('company_id', $user->company()->id)],
+            'template' => 'sometimes|string',
+            'template_id' => 'sometimes|string',
+            'send_email' => 'sometimes|bool'
         ];
+
     }
 
     public function prepareForValidation()

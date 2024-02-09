@@ -1,10 +1,10 @@
 <?php
 /**
- * Quote Ninja (https://paymentninja.com).
+ * Invoice Ninja (https://invoiceninja.com).
  *
- * @link https://github.com/paymentninja/paymentninja source repository
+ * @link https://github.com/invoiceninja/invoiceninja source repository
  *
- * @copyright Copyright (c) 2022. Quote Ninja LLC (https://paymentninja.com)
+ * @copyright Copyright (c) 2022. Invoice Ninja LLC (https://invoiceninja.com)
  *
  * @license https://www.elastic.co/licensing/elastic-license
  */
@@ -20,9 +20,12 @@ class UploadPurchaseOrderRequest extends Request
      *
      * @return bool
      */
-    public function authorize() : bool
+    public function authorize(): bool
     {
-        return auth()->user()->can('edit', $this->purchase_order);
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        return $user->can('edit', $this->purchase_order);
     }
 
     public function rules()
@@ -40,7 +43,21 @@ class UploadPurchaseOrderRequest extends Request
         } elseif ($this->file('file')) {
             $rules['file'] = $this->file_validation;
         }
-        
+
+        $rules['is_public'] = 'sometimes|boolean';
+
         return $rules;
+    }
+
+    public function prepareForValidation()
+    {
+        $input = $this->all();
+
+        if(isset($input['is_public'])) {
+            $input['is_public'] = $this->toBoolean($input['is_public']);
+        }
+
+        $this->replace($input);
+
     }
 }

@@ -29,7 +29,7 @@ class SetDomainNameDb
     {
         $error = [
             'message' => 'Invalid token',
-            'errors' => new stdClass,
+            'errors' => new stdClass(),
         ];
         /*
          * Use the host name to set the active DB
@@ -41,7 +41,7 @@ class SetDomainNameDb
 
         $domain_name = $request->getHost();
 
-        if (strpos($domain_name, 'invoicing.co') !== false) {
+        if (strpos($domain_name, config('ninja.app_domain')) !== false) {
             $subdomain = explode('.', $domain_name)[0];
 
             $query = [

@@ -77,12 +77,12 @@ class Country extends StaticModel
      *
      * @return string The translated country name
      */
-    public function getName() :string
+    public function getName(): string
     {
         return trans('texts.country_'.$this->name);
     }
-          public function getID() :string
-          {
-              return $this->id;
-          }
+    public function getID(): string
+    {
+        return $this->id;
+    }
 }

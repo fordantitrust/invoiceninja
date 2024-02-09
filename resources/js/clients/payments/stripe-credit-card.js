@@ -19,7 +19,6 @@ class StripeCreditCard {
     setupStripe() {
 
         if (this.stripeConnect){
-           // this.stripe.stripeAccount = this.stripeConnect;
            
            this.stripe = Stripe(this.key, {
               stripeAccount: this.stripeConnect,
@@ -232,4 +231,8 @@ let s = new StripeCreditCard(publishableKey, secret, onlyAuthorization, stripeCo
 
 s.handle();
 
+document.addEventListener('livewire:init', () => {
+
 Livewire.on('passed-required-fields-check', () => s.handle());
+
+});

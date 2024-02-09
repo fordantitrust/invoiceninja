@@ -19,6 +19,35 @@ use Illuminate\Http\Request;
 
 class HostedMigrationController extends Controller
 {
+    public function checkStatus(Request $request)
+    {
+        
+        if ($request->header('X-API-HOSTED-SECRET') != config('ninja.ninja_hosted_secret')) {
+            return;
+        }
+
+        MultiDB::findAndSetDbByCompanyKey($request->company_key);
+        $c = Company::where('company_key', $request->company_key)->first();
+
+        if(!$c || $c->is_disabled)
+            return response()->json(['message' => 'ok'], 200);
+
+        // if(\App\Models\Invoice::query()->where('company_id', $c->id)->where('created_at', '>', now()->subMonths(2))->first())
+        //     return response()->json(['message' => 'New data exists, are you sure? Please log in here https://app.invoicing.co and delete the company if you really need to migrate again.'], 400);
+    
+        // if(\App\Models\Client::query()->where('company_id', $c->id)->where('created_at', '>', now()->subMonths(2))->first()) 
+        //     return response()->json(['message' => 'New data exists, are you sure? Please log in here https://app.invoicing.co and delete the company if you really need to migrate again.'], 400);
+        
+        // if(\App\Models\Quote::query()->where('company_id', $c->id)->where('created_at', '>', now()->subMonths(2))) 
+        //     return response()->json(['message' => 'New data exists, are you sure? Please log in here https://app.invoicing.co and delete the company if you really need to migrate again.'], 400);
+
+        // if(\App\Models\RecurringInvoice::query()->where('company_id', $c->id)->where('created_at', '>', now()->subMonths(2))) 
+        //     return response()->json(['message' => 'New data exists, are you sure? Please log in here https://app.invoicing.co and delete the company if you really need to migrate again.'], 400);
+
+        return response()->json(['message' => 'You have already activated this company on v5!!!!!! This migration may be a BAD idea. Contact us contact@invoiceninja.com to confirm this action.'], 400);
+
+    }
+
     public function getAccount(Request $request)
     {
         if ($request->header('X-API-HOSTED-SECRET') != config('ninja.ninja_hosted_secret')) {
@@ -43,6 +72,8 @@ class HostedMigrationController extends Controller
 
         $company = $account->companies->first();
 
+        /** @var \App\Models\CompanyToken $company_token **/
+
         $company_token = CompanyToken::where('user_id', auth()->user()->id)
             ->where('company_id', $company->id)
             ->first();
@@ -60,6 +91,7 @@ class HostedMigrationController extends Controller
 
         MultiDB::findAndSetDbByCompanyKey($input['account_key']);
 
+        /** @var \App\Models\Company $company **/
         $company = Company::with('account')->where('company_key', $input['account_key'])->first();
 
         $forward_url = $company->domain();

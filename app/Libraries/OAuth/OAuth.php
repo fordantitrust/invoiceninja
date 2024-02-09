@@ -23,25 +23,29 @@ class OAuth
     /**
      * Socialite Providers.
      */
-    const SOCIAL_GOOGLE = 1;
+    public const SOCIAL_GOOGLE = 1;
 
-    const SOCIAL_FACEBOOK = 2;
+    public const SOCIAL_FACEBOOK = 2;
 
-    const SOCIAL_GITHUB = 3;
+    public const SOCIAL_GITHUB = 3;
 
-    const SOCIAL_LINKEDIN = 4;
+    public const SOCIAL_LINKEDIN = 4;
 
-    const SOCIAL_TWITTER = 5;
+    public const SOCIAL_TWITTER = 5;
 
-    const SOCIAL_BITBUCKET = 6;
+    public const SOCIAL_BITBUCKET = 6;
 
-    const SOCIAL_MICROSOFT = 7;
+    public const SOCIAL_MICROSOFT = 7;
 
-    const SOCIAL_APPLE = 8;
+    public const SOCIAL_APPLE = 8;
+
+    public $provider_instance;
+
+    public $provider_id;
 
     /**
-     * @param Socialite $user
-     * @return bool|\App\Models\User|\App\Libraries\App\Models\User|null
+     * @param \Laravel\Socialite\Facades\Socialite $socialite_user
+     * @return bool | \App\Models\User | \App\Models\User | null
      */
     public static function handleAuth($socialite_user, $provider)
     {
@@ -87,6 +91,8 @@ class OAuth
                 return 'microsoft';
             case self::SOCIAL_APPLE:
                 return 'apple';
+            default:
+                return 'google';
         }
     }
 
@@ -109,6 +115,8 @@ class OAuth
                 return self::SOCIAL_MICROSOFT;
             case 'apple':
                 return self::SOCIAL_APPLE;
+            default:
+                return self::SOCIAL_GOOGLE;
         }
     }
 

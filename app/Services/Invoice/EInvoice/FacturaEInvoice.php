@@ -12,18 +12,19 @@
 namespace App\Services\Invoice\EInvoice;
 
 use App\Models\Invoice;
-use josemmo\Facturae\Facturae;
+use App\Models\PaymentType;
 use App\Services\AbstractService;
+use Illuminate\Support\Facades\Storage;
+use josemmo\Facturae\Facturae;
+use josemmo\Facturae\FacturaeCentre;
 use josemmo\Facturae\FacturaeItem;
 use josemmo\Facturae\FacturaeParty;
-use Illuminate\Support\Facades\Storage;
-use josemmo\Facturae\Common\FacturaeSigner;
-use josemmo\Facturae\FacturaeCentre;
+use josemmo\Facturae\FacturaePayment;
 
 class FacturaEInvoice extends AbstractService
 {
     private Facturae $fac;
-    
+
     private $calc;
 
     private $centre_codes = [
@@ -169,17 +170,18 @@ class FacturaEInvoice extends AbstractService
              ->buildItems()
              ->setDiscount()
              ->setPoNumber()
+             ->setLegalTerms()
+             ->setPayments()
+             ->setBillingPeriod()
              ->signDocument();
 
-        $disk = config('filesystems.default');
+        // $disk = config('filesystems.default');
 
-        if (!Storage::disk($disk)->exists($this->invoice->client->e_invoice_filepath($this->invoice->invitations->first()))) {
-            Storage::makeDirectory($this->invoice->client->e_invoice_filepath($this->invoice->invitations->first()));
-        }
+        // if (!Storage::disk($disk)->exists($this->invoice->client->e_invoice_filepath($this->invoice->invitations->first()))) {
+        //     Storage::makeDirectory($this->invoice->client->e_invoice_filepath($this->invoice->invitations->first()));
+        // }
 
-        $this->fac->export(Storage::disk($disk)->path($this->invoice->client->e_invoice_filepath($this->invoice->invitations->first()) . $this->invoice->getFileName("xsig")));
-
-        return $this->invoice->client->e_invoice_filepath($this->invoice->invitations->first()) . $this->invoice->getFileName("xsig");
+        return $this->fac->export();
 
     }
 
@@ -188,14 +190,11 @@ class FacturaEInvoice extends AbstractService
     {
         $facturae_centres = [];
 
-        if($this->invoice->client->custom_value1 == 'yes')
-        {
+        if($this->invoice->client->custom_value1 == 'yes') {
 
-            foreach($this->invoice->client->contacts()->whereNotNull('custom_value1')->whereNull('deleted_at')->cursor() as $contact)
-            {
+            foreach($this->invoice->client->contacts()->whereNotNull('custom_value1')->whereNull('deleted_at')->cursor() as $contact) {
 
-                if(in_array($contact->custom_value1, array_keys($this->centre_codes)))
-                {
+                if(in_array($contact->custom_value1, array_keys($this->centre_codes))) {
                     $facturae_centres[] = new FacturaeCentre([
                         'role' => $this->centre_codes[$contact->custom_value1],
                         'code' => $contact->custom_value2,
@@ -212,9 +211,11 @@ class FacturaEInvoice extends AbstractService
 
     private function setPoNumber(): self
     {
-        if(strlen($this->invoice->po_number) > 1) {
-            $this->fac->setReferences($this->invoice->po_number);
-        }
+        $po = $this->invoice->po_number ?? '';
+        $transaction_reference = (isset($this->invoice->custom_value1) && strlen($this->invoice->custom_value1) > 2) ? substr($this->invoice->custom_value1, 0, 20) : null;
+        $contract_reference = (isset($this->invoice->custom_value2) && strlen($this->invoice->custom_value2) > 2) ? $this->invoice->custom_value2 : null;
+
+        $this->fac->setReferences($po, $transaction_reference, $contract_reference);
 
         return $this;
     }
@@ -228,6 +229,142 @@ class FacturaEInvoice extends AbstractService
         return $this;
     }
 
+    private function setLegalTerms(): self
+    {
+        $this->fac->addLegalLiteral(substr($this->invoice->public_notes, 0, 250));
+
+        return $this;
+    }
+
+    private function setBillingPeriod(): self
+    {
+        if(!$this->invoice->custom_value3) {
+            return $this;
+        }
+
+        try {
+            if (\Carbon\Carbon::createFromFormat('Y-m-d', $this->invoice->custom_value3)->format('Y-m-d') === $this->invoice->custom_value3 &&
+            \Carbon\Carbon::createFromFormat('Y-m-d', $this->invoice->custom_value4)->format('Y-m-d') === $this->invoice->custom_value4
+            ) {
+                $this->fac->setBillingPeriod(\Carbon\Carbon::parse($this->invoice->custom_value3)->format('Y-m-d'), \Carbon\Carbon::parse($this->invoice->custom_value4)->format('Y-m-d'));
+            }
+        } catch(\Exception $e) {
+            nlog($e->getMessage());
+        }
+
+        return $this;
+    }
+
+    private function setPayments(): self
+    {
+        $this->invoice->payments()->each(function ($payment) {
+
+            $payment_data = [
+                "dueDate" => \Carbon\Carbon::parse($payment->date)->format('Y-m-d'),
+                "amount"  => $payment->pivot->amount,
+            ];
+
+            $data = array_merge($this->resolvePaymentMethod($payment), $payment_data);
+
+            $this->fac->addPayment(new FacturaePayment($data));
+
+        });
+
+        return $this;
+    }
+
+    /**
+     *
+     * FacturaePayment::TYPE_CASH	Cash
+     * FacturaePayment::TYPE_DEBIT	Domiciled receipt
+     * FacturaePayment::TYPE_RECEIPT	Receipt
+     * FacturaePayment::TYPE_TRANSFER	Transfer
+     * FacturaePayment::TYPE_ACCEPTED_BILL_OF_EXCHANGE	Letter Accepted
+     * FacturaePayment::TYPE_DOCUMENTARY_CREDIT	Letter of credit
+     * FacturaePayment::TYPE_CONTRACT_AWARD	contract award
+     * FacturaePayment::TYPE_BILL_OF_EXCHANGE	Bill of exchange
+     * FacturaePayment::TYPE_TRANSFERABLE_IOU	I will pay to order
+     * FacturaePayment::TYPE_IOU	I Will Pay Not To Order
+     * FacturaePayment::TYPE_CHEQUE	Check
+     * FacturaePayment::TYPE_REIMBURSEMENT	Replacement
+     * FacturaePayment::TYPE_SPECIAL	specials
+     * FacturaePayment::TYPE_SETOFF	Compensation
+     * FacturaePayment::TYPE_POSTGIRO	Money order
+     * FacturaePayment::TYPE_CERTIFIED_CHEQUE	conformed check
+     * FacturaePayment::TYPE_BANKERS_DRAFT	Bank check
+     * FacturaePayment::TYPE_CASH_ON_DELIVERY	Cash on delivery
+     * FacturaePayment::TYPE_CARD	Payment by card
+     *
+     * @param \App\Models\Payment $payment
+     * @return array
+     */
+    private function resolvePaymentMethod(\App\Models\Payment $payment): array
+    {
+        $data = [];
+        $method = FacturaePayment::TYPE_CARD;
+
+        match($payment->type_id) {
+            PaymentType::BANK_TRANSFER => $method = FacturaePayment::TYPE_TRANSFER	,
+            PaymentType::CASH => $method = FacturaePayment::TYPE_CASH	,
+            PaymentType::ACH => $method = FacturaePayment::TYPE_TRANSFER	,
+            PaymentType::VISA => $method = FacturaePayment::TYPE_CARD	,
+            PaymentType::MASTERCARD => $method = FacturaePayment::TYPE_CARD	,
+            PaymentType::AMERICAN_EXPRESS => $method = FacturaePayment::TYPE_CARD	,
+            PaymentType::DISCOVER => $method = FacturaePayment::TYPE_CARD	,
+            PaymentType::DINERS => $method = FacturaePayment::TYPE_CARD	,
+            PaymentType::EUROCARD => $method = FacturaePayment::TYPE_CARD	,
+            PaymentType::NOVA => $method = FacturaePayment::TYPE_CARD	,
+            PaymentType::CREDIT_CARD_OTHER => $method = FacturaePayment::TYPE_CARD	,
+            PaymentType::PAYPAL => $method = FacturaePayment::TYPE_CARD	,
+            PaymentType::CHECK => $method = FacturaePayment::TYPE_CHEQUE	,
+            PaymentType::CARTE_BLANCHE => $method = FacturaePayment::TYPE_CARD	,
+            PaymentType::UNIONPAY => $method = FacturaePayment::TYPE_CARD	,
+            PaymentType::JCB => $method = FacturaePayment::TYPE_CARD	,
+            PaymentType::LASER => $method = FacturaePayment::TYPE_CARD	,
+            PaymentType::MAESTRO => $method = FacturaePayment::TYPE_CARD	,
+            PaymentType::SOLO => $method = FacturaePayment::TYPE_CARD	,
+            PaymentType::SWITCH => $method = FacturaePayment::TYPE_CARD	,
+            PaymentType::VENMO => $method = FacturaePayment::TYPE_CARD	,
+            PaymentType::ALIPAY => $method = FacturaePayment::TYPE_CARD	,
+            PaymentType::SOFORT => $method =  FacturaePayment::TYPE_TRANSFER,
+            PaymentType::SEPA => $method = FacturaePayment::TYPE_TRANSFER,
+            PaymentType::GOCARDLESS => $method = FacturaePayment::TYPE_SPECIAL	,
+            PaymentType::CRYPTO => $method = FacturaePayment::TYPE_SPECIAL	,
+            PaymentType::CREDIT => $method = FacturaePayment::TYPE_DOCUMENTARY_CREDIT	,
+            PaymentType::ZELLE => $method = FacturaePayment::TYPE_SPECIAL	,
+            PaymentType::MOLLIE_BANK_TRANSFER => $method = FacturaePayment::TYPE_TRANSFER	,
+            PaymentType::KBC => $method = FacturaePayment::TYPE_SPECIAL	,
+            PaymentType::BANCONTACT => $method = FacturaePayment::TYPE_SPECIAL	,
+            PaymentType::IDEAL => $method = FacturaePayment::TYPE_SPECIAL	,
+            PaymentType::HOSTED_PAGE => $method = FacturaePayment::TYPE_SPECIAL	,
+            PaymentType::GIROPAY => $method = FacturaePayment::TYPE_SPECIAL	,
+            PaymentType::PRZELEWY24 => $method = FacturaePayment::TYPE_SPECIAL	,
+            PaymentType::EPS => $method = FacturaePayment::TYPE_SPECIAL	,
+            PaymentType::DIRECT_DEBIT => $method = FacturaePayment::TYPE_SPECIAL	,
+            PaymentType::BECS => $method = FacturaePayment::TYPE_SPECIAL	,
+            PaymentType::ACSS => $method = FacturaePayment::TYPE_SPECIAL	,
+            PaymentType::INSTANT_BANK_PAY => $method = FacturaePayment::TYPE_SPECIAL	,
+            PaymentType::FPX => $method = FacturaePayment::TYPE_SPECIAL	,
+            PaymentType::KLARNA => $method = FacturaePayment::TYPE_SPECIAL	,
+            PaymentType::Interac_E_Transfer => $method = FacturaePayment::TYPE_TRANSFER	,
+            PaymentType::BACS => $method = FacturaePayment::TYPE_SPECIAL	,
+            PaymentType::STRIPE_BANK_TRANSFER => $method = FacturaePayment::TYPE_TRANSFER	,
+            PaymentType::CASH_APP => $method = FacturaePayment::TYPE_SPECIAL	,
+            default => $method = FacturaePayment::TYPE_CARD	,
+        };
+
+        $data['method'] = $method;
+
+        if($method == FacturaePayment::TYPE_TRANSFER) {
+            $data['iban'] = $payment->custom_value1;
+            $data['bic'] = $payment->custom_value2;
+        }
+
+        return $data;
+
+
+    }
+
     private function buildItems(): self
     {
 
@@ -236,7 +373,7 @@ class FacturaEInvoice extends AbstractService
                 'name' => $item->product_key,
                 'description' => $item->notes,
                 'quantity' => $item->quantity,
-                'unitPrice' => $item->cost,
+                'unitPriceWithoutTax' => $item->cost,
                 'discountsAndRebates' => $item->discount,
                 'charges' => [],
                 'discounts' => [],
@@ -245,11 +382,11 @@ class FacturaEInvoice extends AbstractService
                 // 'specialTaxableEventReason' => '',
                 // 'specialTaxableEventReasonDescription' => '',
             ]));
-            
+
         }
 
         return $this;
-    
+
     }
 
     private function buildRatesForItem(\stdClass $item): array
@@ -257,27 +394,28 @@ class FacturaEInvoice extends AbstractService
         $data = [];
 
         if (strlen($item->tax_name1) > 1) {
-        
+
             $data[$this->resolveTaxCode($item->tax_name1)] = $item->tax_rate1;
-        
+
         }
 
         if (strlen($item->tax_name2) > 1) {
-                
+
 
             $data[$this->resolveTaxCode($item->tax_name2)] = $item->tax_rate2;
-                
+
         }
 
         if (strlen($item->tax_name3) > 1) {
-                
+
 
             $data[$this->resolveTaxCode($item->tax_name3)] = $item->tax_rate3;
-                
+
         }
-        
-        if(count($data) == 0)
+
+        if(count($data) == 0) {
             $data[Facturae::TAX_IVA] = 0;
+        }
 
         return $data;
     }
@@ -324,8 +462,12 @@ class FacturaEInvoice extends AbstractService
     {
         $company = $this->invoice->company;
 
+        if($company->getSetting('classification') == 'individual') {
+            return $this->setIndividualSeller();
+        }
+
         $seller = new FacturaeParty([
-            "isLegalEntity" => true, // Se asume true si se omite
+            "isLegalEntity" => true,
             "taxNumber" => $company->settings->vat_number,
             "name" => substr($company->present()->name(), 0, 40),
             "address" => substr($company->settings->address1, 0, 80),
@@ -344,39 +486,87 @@ class FacturaEInvoice extends AbstractService
             "fax" => "",
             "website" => substr($company->settings->website, 0, 50),
             "contactPeople" => substr($company->owner()->present()->name(), 0, 40),
+            "firstSurname" => $company->owner()->present()->firstName(),
+            "lastSurname" => $company->owner()->present()->lastName(),
             // 'centres' => $this->setFace(),
             // "cnoCnae" => "04647", // Clasif. Nacional de Act. Económicas
             // "ineTownCode" => "280796" // Cód. de municipio del INE
         ]);
 
         $this->fac->setSeller($seller);
-        
+
         return $this;
     }
 
-    private function buildBuyer(): self
+
+    private function setIndividualSeller(): self
     {
 
-        $buyer = new FacturaeParty([
-        "isLegalEntity" => $this->invoice->client->has_valid_vat_number,
-        "taxNumber"     => $this->invoice->client->vat_number,
-        "name"          => substr($this->invoice->client->present()->name(),0, 40),
-        "firstSurname"  => substr($this->invoice->client->present()->first_name(),0, 40),
-        "lastSurname"   => substr($this->invoice->client->present()->last_name(),0, 40),
-        "address"       => substr($this->invoice->client->address1,0, 80),
-        "postCode"      => substr($this->invoice->client->postal_code,0,5),
-        "town"          => substr($this->invoice->client->city,0, 50),
-        "province"      => substr($this->invoice->client->state,0, 20),
-        "countryCode"   => $this->invoice->client->country->iso_3166_3,  // Se asume España si se omite
-        "email"   => substr($this->invoice->client->present()->email(),0, 60),
-        "phone"   => substr($this->invoice->client->present()->phone(),0, 15),
-        "fax"     => "",
-        "website" => substr($this->invoice->client->present()->website(), 0 ,60),
-        "contactPeople" => substr($this->invoice->client->present()->first_name()." ".$this->invoice->client->present()->last_name(), 0, 40),
-        'centres' => $this->setFace(),
-        // "cnoCnae" => "04791", // Clasif. Nacional de Act. Económicas
-        // "ineTownCode" => "280796" // Cód. de municipio del INE
+        $company = $this->invoice->company;
+
+        $seller = new FacturaeParty([
+            "isLegalEntity" => false,
+            "taxNumber" => $company->settings->vat_number,
+            // "name" => $company->getSetting('classification') === 'individual' ? substr($company->owner()->present()->name(), 0, 40) : substr($company->present()->name(), 0, 40),
+            "address" => substr($company->settings->address1, 0, 80),
+            "postCode" => substr($this->invoice->client->postal_code, 0, 5),
+            "town" => substr($company->settings->city, 0, 50),
+            "province" => substr($company->settings->state, 0, 20),
+            "countryCode" => $company->country()->iso_3166_3,  // Se asume España si se omite
+            // "book" => "0",  // Libro
+            // "merchantRegister" => "RG", // Registro Mercantil
+            // "sheet" => "1",  // Hoja
+            // "folio" => "2",  // Folio
+            // "section" => "3",  // Sección
+            // "volume" => "4",  // Tomo
+            "email" => substr($company->settings->email, 0, 60),
+            "phone" => substr($company->settings->phone, 0, 15),
+            "fax" => "",
+            "website" => substr($company->settings->website, 0, 50),
+            // "contactPeople" => substr($company->owner()->present()->name(), 0, 40),
+            "name" => $company->owner()->present()->firstName(),
+            "firstSurname" => $company->owner()->present()->lastName(),
+            // "lastSurname" => $company->owner()->present()->lastName(),
         ]);
+
+        $this->fac->setSeller($seller);
+
+        return $this;
+
+
+    }
+
+
+    private function buildBuyer(): self
+    {
+        $buyer_array = [
+            "isLegalEntity" => $this->invoice->client->classification === 'individual' ? false : true,
+            "taxNumber"     => $this->invoice->client->vat_number,
+            "name"          => substr($this->invoice->client->present()->name(), 0, 40),
+            // "firstSurname"  => substr($this->invoice->client->present()->last_name(), 0, 40),
+            // "lastSurname"   => substr($this->invoice->client->present()->last_name(), 0, 40),
+            "address"       => substr($this->invoice->client->address1, 0, 80),
+            "postCode"      => substr($this->invoice->client->postal_code, 0, 5),
+            "town"          => substr($this->invoice->client->city, 0, 50),
+            "province"      => substr($this->invoice->client->state, 0, 20),
+            "countryCode"   => $this->invoice->client->country->iso_3166_3,  // Se asume España si se omite
+            "email"   => substr($this->invoice->client->present()->email(), 0, 60),
+            "phone"   => substr($this->invoice->client->present()->phone(), 0, 15),
+            "fax"     => "",
+            "website" => substr($this->invoice->client->present()->website(), 0, 60),
+            "contactPeople" => substr($this->invoice->client->present()->first_name()." ".$this->invoice->client->present()->last_name(), 0, 40),
+            'centres' => $this->setFace(),
+            // "cnoCnae" => "04791", // Clasif. Nacional de Act. Económicas
+            // "ineTownCode" => "280796" // Cód. de municipio del INE
+        ];
+
+        if($this->invoice->client->classification === 'individual') {
+            $buyer_array['name'] = $this->invoice->client->present()->first_name();
+            $buyer_array['firstSurname'] = $this->invoice->client->present()->last_name();
+        }
+
+        $buyer = new FacturaeParty($buyer_array);
+
 
         $this->fac->setBuyer($buyer);
 
@@ -389,8 +579,9 @@ class FacturaEInvoice extends AbstractService
         $ssl_cert = $this->invoice->company->getInvoiceCert();
         $ssl_passphrase = $this->invoice->company->getSslPassPhrase();
 
-        if($ssl_cert)
+        if($ssl_cert) {
             $this->fac->sign($ssl_cert, null, $ssl_passphrase);
+        }
 
         return $this;
     }

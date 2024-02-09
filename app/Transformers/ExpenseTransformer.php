@@ -11,8 +11,11 @@
 
 namespace App\Transformers;
 
+use App\Models\Client;
 use App\Models\Document;
 use App\Models\Expense;
+use App\Models\ExpenseCategory;
+use App\Models\Invoice;
 use App\Models\Vendor;
 use App\Utils\Traits\MakesHash;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -25,17 +28,19 @@ class ExpenseTransformer extends EntityTransformer
 {
     use MakesHash;
     use SoftDeletes;
-    
-    protected $defaultIncludes = [
+
+    protected array $defaultIncludes = [
         'documents',
     ];
 
     /**
      * @var array
      */
-    protected $availableIncludes = [
+    protected array $availableIncludes = [
         'client',
         'vendor',
+        'category',
+        'invoice',
     ];
 
     public function includeDocuments(Expense $expense)
@@ -54,6 +59,28 @@ class ExpenseTransformer extends EntityTransformer
         }
 
         return $this->includeItem($expense->client, $transformer, Client::class);
+    }
+
+    public function includeInvoice(Expense $expense): ?Item
+    {
+        $transformer = new InvoiceTransformer($this->serializer);
+
+        if (!$expense->invoice) {
+            return null;
+        }
+
+        return $this->includeItem($expense->invoice, $transformer, Invoice::class);
+    }
+
+    public function includeCategory(Expense $expense): ?Item
+    {
+        $transformer = new ExpenseCategoryTransformer($this->serializer);
+
+        if (!$expense->category) {
+            return null;
+        }
+
+        return $this->includeItem($expense->category, $transformer, ExpenseCategory::class);
     }
 
     public function includeVendor(Expense $expense): ?Item

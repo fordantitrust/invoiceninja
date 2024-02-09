@@ -12,12 +12,15 @@
 namespace App\Mail\RecurringInvoice;
 
 use App\Models\ClientContact;
+use App\Models\Company;
 use App\Models\RecurringInvoice;
 use App\Utils\Ninja;
 use Illuminate\Support\Facades\App;
 
 class ClientContactRequestCancellationObject
 {
+    public Company $company;
+
     public function __construct(public RecurringInvoice $recurring_invoice, public ClientContact $client_contact, private bool $gateway_refund_attempted)
     {
     }
@@ -47,7 +50,7 @@ class ClientContactRequestCancellationObject
             'logo' => $this->company->present()->logo(),
         ];
 
-        $mail_obj = new \stdClass;
+        $mail_obj = new \stdClass();
         $mail_obj->subject = ctrans('texts.recurring_cancellation_request', ['contact' => $this->client_contact->present()->name()]);
         $mail_obj->data = $data;
         $mail_obj->markdown = 'email.admin.generic';

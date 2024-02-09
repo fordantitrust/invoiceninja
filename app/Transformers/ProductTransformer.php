@@ -16,20 +16,19 @@ use App\Models\Document;
 use App\Models\Product;
 use App\Models\User;
 use App\Utils\Traits\MakesHash;
-use League\Fractal\Resource\Collection;
 
 class ProductTransformer extends EntityTransformer
 {
     use MakesHash;
 
-    protected $defaultIncludes = [
+    protected array $defaultIncludes = [
         'documents',
     ];
 
     /**
      * @var array
      */
-    protected $availableIncludes = [
+    protected array $availableIncludes = [
         'company',
         'user',
     ];
@@ -37,7 +36,7 @@ class ProductTransformer extends EntityTransformer
     /**
      * @param Product $product
      *
-     * @return Collection
+     * @return \Illuminate\Support\Collection
      */
     public function includeUser(Product $product)
     {
@@ -49,7 +48,7 @@ class ProductTransformer extends EntityTransformer
     /**
      * @param Product $product
      *
-     * @return Collection
+     * @return \Illuminate\Support\Collection
      */
     public function includeCompany(Product $product)
     {
@@ -75,7 +74,7 @@ class ProductTransformer extends EntityTransformer
             'notes' => $product->notes ?: '',
             'cost' => (float) $product->cost ?: 0,
             'price' => (float) $product->price ?: 0,
-            'quantity' => (float) $product->quantity ?: 1.0,
+            'quantity' => is_numeric($product->quantity) ? (float) $product->quantity : (float) 1.0,
             'tax_name1' => $product->tax_name1 ?: '',
             'tax_rate1' => (float) $product->tax_rate1 ?: 0,
             'tax_name2' => $product->tax_name2 ?: '',
@@ -95,7 +94,7 @@ class ProductTransformer extends EntityTransformer
             'stock_notification_threshold' => (int) $product->stock_notification_threshold,
             'max_quantity' => (int) $product->max_quantity,
             'product_image' => (string) $product->product_image ?: '',
-            'tax_id' => (string) $product->tax_id ?: '1',     
+            'tax_id' => (string) $product->tax_id ?: '1',
         ];
     }
 }

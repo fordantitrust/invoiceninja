@@ -28,9 +28,12 @@ class UpdateCreditRequest extends Request
      *
      * @return bool
      */
-    public function authorize() : bool
+    public function authorize(): bool
     {
-        return auth()->user()->can('edit', $this->credit);
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        return $user->can('edit', $this->credit);
     }
 
     /**
@@ -40,8 +43,11 @@ class UpdateCreditRequest extends Request
      */
     public function rules()
     {
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
         $rules = [];
-        
+
         if ($this->file('documents') && is_array($this->file('documents'))) {
             $rules['documents.*'] = $this->file_validation;
         } elseif ($this->file('documents')) {
@@ -54,9 +60,9 @@ class UpdateCreditRequest extends Request
             $rules['file'] = $this->file_validation;
         }
 
-        if ($this->number) {
-            $rules['number'] = Rule::unique('credits')->where('company_id', auth()->user()->company()->id)->ignore($this->credit->id);
-        }
+        $rules['number'] = ['bail', 'sometimes', 'nullable', Rule::unique('credits')->where('company_id', $user->company()->id)->ignore($this->credit->id)];
+
+        $rules['client_id'] = ['bail', 'sometimes',Rule::in([$this->credit->client_id])];
 
         $rules['line_items'] = 'array';
         $rules['discount'] = 'sometimes|numeric';
@@ -67,7 +73,8 @@ class UpdateCreditRequest extends Request
         $rules['tax_name1'] = 'bail|sometimes|string|nullable';
         $rules['tax_name2'] = 'bail|sometimes|string|nullable';
         $rules['tax_name3'] = 'bail|sometimes|string|nullable';
-        
+        $rules['exchange_rate'] = 'bail|sometimes|numeric';
+
         return $rules;
     }
 
@@ -79,6 +86,10 @@ class UpdateCreditRequest extends Request
 
         if (isset($input['line_items'])) {
             $input['line_items'] = isset($input['line_items']) ? $this->cleanItems($input['line_items']) : [];
+        }
+
+        if (array_key_exists('exchange_rate', $input) && is_null($input['exchange_rate'])) {
+            $input['exchange_rate'] = 1;
         }
 
         $input['id'] = $this->credit->id;

@@ -26,20 +26,27 @@ class StoreProjectRequest extends Request
      *
      * @return bool
      */
-    public function authorize() : bool
+    public function authorize(): bool
     {
-        return auth()->user()->can('create', Project::class);
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        return $user->can('create', Project::class);
     }
 
     public function rules()
     {
+
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
         $rules = [];
 
         $rules['name'] = 'required';
-        $rules['client_id'] = 'required|exists:clients,id,company_id,'.auth()->user()->company()->id;
+        $rules['client_id'] = 'required|exists:clients,id,company_id,'.$user->company()->id;
 
         if (isset($this->number)) {
-            $rules['number'] = Rule::unique('projects')->where('company_id', auth()->user()->company()->id);
+            $rules['number'] = Rule::unique('projects')->where('company_id', $user->company()->id);
         }
 
         if ($this->file('documents') && is_array($this->file('documents'))) {
@@ -53,7 +60,7 @@ class StoreProjectRequest extends Request
         } elseif ($this->file('file')) {
             $rules['file'] = $this->file_validation;
         }
-        
+
         return $this->globalRules($rules);
     }
 

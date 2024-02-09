@@ -11,23 +11,43 @@
 
 namespace App\Http\Requests\Email;
 
-use App\Http\Requests\Request;
 use App\Utils\Ninja;
-use App\Utils\Traits\MakesHash;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Str;
+use App\Http\Requests\Request;
+use App\Utils\Traits\MakesHash;
+use Illuminate\Validation\Rule;
+use Illuminate\Auth\Access\AuthorizationException;
 
 class SendEmailRequest extends Request
 {
     use MakesHash;
 
+    private string $entity_plural = '';
     private string $error_message = '';
+
+    public array $templates = [
+        'email_template_invoice',
+        'email_template_quote',
+        'email_template_credit',
+        'email_template_payment',
+        'email_template_payment_partial',
+        'email_template_statement',
+        'email_template_reminder1',
+        'email_template_reminder2',
+        'email_template_reminder3',
+        'email_template_reminder_endless',
+        'email_template_custom1',
+        'email_template_custom2',
+        'email_template_custom3',
+        'email_template_purchase_order',
+    ];
+
     /**
      * Determine if the user is authorized to make this request.
      *
      * @return bool
      */
-    public function authorize() : bool
+    public function authorize(): bool
     {
         return $this->checkUserAbleToSend();
     }
@@ -39,19 +59,26 @@ class SendEmailRequest extends Request
      */
     public function rules()
     {
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
         return [
-            'template' => 'bail|required',
-            'entity' => 'bail|required',
-            'entity_id' => 'bail|required',
-            'cc_email' => 'bail|sometimes|email|nullable',
+            'template' => 'bail|required|in:'.implode(',', $this->templates),
+            'entity' => 'bail|required|in:App\Models\Invoice,App\Models\Quote,App\Models\Credit,App\Models\RecurringInvoice,App\Models\PurchaseOrder,App\Models\Payment',
+            'entity_id' => ['bail', 'required', Rule::exists($this->entity_plural, 'id')->where('company_id', $user->company()->id)],
+            'cc_email.*' => 'bail|sometimes|email',
         ];
+
     }
 
     public function prepareForValidation()
     {
         $input = $this->all();
 
-        $settings = auth()->user()->company()->settings;
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        $settings = $user->company()->settings;
 
         if (empty($input['template'])) {
             $input['template'] = '';
@@ -64,9 +91,19 @@ class SendEmailRequest extends Request
         if (array_key_exists('entity_id', $input)) {
             $input['entity_id'] = $this->decodePrimaryKey($input['entity_id']);
         }
-        
-        if (array_key_exists('entity', $input)) {
+
+        $this->entity_plural = Str::plural($input['entity']) ?? '';
+
+        if (isset($input['entity'])) {
             $input['entity'] = "App\Models\\".ucfirst(Str::camel($input['entity']));
+        }
+
+        if(isset($input['cc_email'])) {
+            $input['cc_email'] = collect(explode(",", $input['cc_email']))->map(function ($email) {
+                return trim($email);
+            })->filter(function ($email) {
+                return filter_var($email, FILTER_VALIDATE_EMAIL);
+            })->slice(0, 4)->toArray();
         }
 
         $this->replace($input);
@@ -82,19 +119,23 @@ class SendEmailRequest extends Request
     private function checkUserAbleToSend()
     {
         $input = $this->all();
-        
-        
-        if (Ninja::isHosted() && !auth()->user()->account->account_sms_verified) {
-            $this->error_message = ctrans('texts.authorization_sms_failure');
 
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        if (Ninja::isHosted() && !$user->account->account_sms_verified) {
+            $this->error_message = ctrans('texts.authorization_sms_failure');
             return false;
         }
-        
-        /*Make sure we have all the require ingredients to send a template*/
-        if (array_key_exists('entity', $input) && array_key_exists('entity_id', $input) && is_string($input['entity']) && $input['entity_id']) {
 
-            /** @var \App\Models\User $user */
-            $user = auth()->user();
+        if (Ninja::isHosted() && $user->account->emailQuotaExceeded()) {
+            $this->error_message = ctrans('texts.email_quota_exceeded_subject');
+            return false;
+        }
+
+        /*Make sure we have all the require ingredients to send a template*/
+        if (isset($input['entity']) && array_key_exists('entity_id', $input) && is_string($input['entity']) && $input['entity_id']) {
+
 
             $company = $user->company();
 
@@ -107,6 +148,8 @@ class SendEmailRequest extends Request
             if ($entity_obj && ($company->id == $entity_obj->company_id) && $user->can('edit', $entity_obj)) {
                 return true;
             }
+        } else {
+            $this->error_message = "Invalid entity or entity_id";
         }
 
         return false;

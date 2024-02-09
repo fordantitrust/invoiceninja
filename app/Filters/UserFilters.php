@@ -21,7 +21,7 @@ class UserFilters extends QueryFilters
     /**
      * Filter based on search text.
      *
-     * @param string query filter
+     * @param string $filter
      * @return Builder
      * @deprecated
      */
@@ -43,7 +43,7 @@ class UserFilters extends QueryFilters
     /**
      * Sorts the list based on $sort.
      *
-     * @param string sort formatted as column|asc
+     * @param string $sort formatted as column|asc
      * @return Builder
      */
     public function sort(string $sort = ''): Builder
@@ -54,7 +54,9 @@ class UserFilters extends QueryFilters
             return $this->builder;
         }
 
-        return $this->builder->orderBy($sort_col[0], $sort_col[1]);
+        $dir = ($sort_col[1] == 'asc') ? 'asc' : 'desc';
+
+        return $this->builder->orderBy($sort_col[0], $dir);
     }
 
     /**
@@ -64,8 +66,44 @@ class UserFilters extends QueryFilters
      */
     public function entityFilter()
     {
-        return $this->builder->whereHas('company_users', function ($q) {
-            $q->where('company_id', '=', auth()->user()->company()->id);
+
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        return $this->builder->whereHas('company_users', function ($q) use ($user) {
+            $q->where('company_id', '=', $user->company()->id);
+        });
+    }
+
+    /**
+     * Hides owner users from the list.
+     *
+     * @return Builder
+     */
+    public function hideOwnerUsers(): Builder
+    {
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        return $this->builder->whereHas('company_users', function ($q) use ($user) {
+            $q->where('company_id', '=', $user->company()->id)->where('is_owner', false);
+        });
+
+    }
+
+    /**
+     * Filters users that have been removed from the
+     * company, but not deleted from the system.
+     *
+     * @return Builder
+     */
+    public function hideRemovedUsers(): Builder
+    {
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        return $this->builder->whereHas('company_users', function ($q) use ($user) {
+            $q->where('company_id', '=', $user->company()->id)->whereNull('deleted_at');
         });
     }
 
@@ -83,12 +121,30 @@ class UserFilters extends QueryFilters
             return $this->builder;
         }
 
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
         return $this->builder
             ->orWhere($this->with_property, $value)
             ->orderByRaw("{$this->with_property} = ? DESC", [$value])
-            ->where('account_id', auth()->user()->account_id);
+            ->where('account_id', $user->account_id);
     }
-    
+
+    /**
+     * Returns users with permissions to send emails via OAuth
+     *
+     * @param  string $value
+     * @return Builder
+     */
+    public function sending_users(string $value = ''): Builder
+    {
+        if (strlen($value) == 0 || $value != 'true') {
+            return $this->builder;
+        }
+
+        return $this->builder->whereNotNull('oauth_user_refresh_token');
+    }
+
     /**
      * Exclude a list of user_ids, can pass multiple
      * user IDs by separating them with a comma.
@@ -105,8 +161,45 @@ class UserFilters extends QueryFilters
         $user_array = $this->transformKeys(explode(',', $user_id));
 
         return  $this->builder->where(function ($query) use ($user_array) {
-            $query->whereNotIn('id', $user_array)
-                  ->where('account_id', auth()->user()->account_id);
+            $query->whereNotIn('id', $user_array);
         });
     }
+
+    /**
+     * Filters the list based on the status
+     * archived, active, deleted.
+     *
+     * @param string $filter
+     * @return Builder
+     */
+    public function status(string $filter = ''): Builder
+    {
+
+
+        if (strlen($filter) == 0) {
+            return $this->builder;
+        }
+
+        $filters = explode(',', $filter);
+
+        return $this->builder->where(function ($query) use ($filters) {
+
+            /** @var \App\Models\User $user */
+            $user = auth()->user();
+
+            if (in_array(self::STATUS_ACTIVE, $filters)) {
+                $query->orWhereNull('deleted_at');
+            }
+
+            if (in_array(self::STATUS_ARCHIVED, $filters)) {
+                $query->orWhereNotNull('deleted_at')->where('is_deleted', 0);
+            }
+
+            if (in_array(self::STATUS_DELETED, $filters)) {
+                $query->orWhere('is_deleted', 1);
+            }
+        });
+    }
+
+
 }

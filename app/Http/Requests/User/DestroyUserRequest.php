@@ -21,8 +21,11 @@ class DestroyUserRequest extends Request
      *
      * @return bool
      */
-    public function authorize() : bool
+    public function authorize(): bool
     {
-        return auth()->user()->isOwner();
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        return $user->isOwner();
     }
 }

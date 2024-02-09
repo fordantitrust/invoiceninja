@@ -13,8 +13,9 @@
 namespace App\Http\Requests\ClientPortal\Quotes;
 
 use App\Http\ViewComposers\PortalComposer;
-use function auth;
 use Illuminate\Foundation\Http\FormRequest;
+
+use function auth;
 
 class ProcessQuotesInBulkRequest extends FormRequest
 {
@@ -27,6 +28,7 @@ class ProcessQuotesInBulkRequest extends FormRequest
     {
         return [
             'quotes' => ['array'],
+            'action' => 'sometimes',
         ];
     }
 }

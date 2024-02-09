@@ -39,7 +39,7 @@ class PurchaseOrderExpense
         $expense->calculate_tax_by_amount = true;
         $expense->private_notes = ctrans('texts.purchase_order_number_short') . " " . $this->purchase_order->number;
         $expense->currency_id = $this->purchase_order->vendor->currency_id;
-        
+
         $line_items = $this->purchase_order->line_items;
 
         $expense->public_notes = '';
@@ -57,7 +57,7 @@ class PurchaseOrderExpense
 
         $expense->number = empty($expense->number) ? $this->getNextExpenseNumber($expense) : $expense->number;
 
-        $expense->save();
+        $expense->saveQuietly();
         event('eloquent.created: App\Models\Expense', $expense);
 
         $this->purchase_order->expense_id = $expense->id;

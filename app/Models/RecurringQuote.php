@@ -61,6 +61,7 @@ use Laracasts\Presenter\PresentableTrait;
  * @property string $balance
  * @property string|null $last_viewed
  * @property int $frequency_id
+ * @property int $design_id
  * @property string|null $last_sent_date
  * @property string|null $next_send_date
  * @property int|null $remaining_cycles
@@ -110,122 +111,8 @@ use Laracasts\Presenter\PresentableTrait;
  * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote onlyTrashed()
  * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote query()
  * @method static \Illuminate\Database\Eloquent\Builder|BaseModel scope()
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereAmount($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereAssignedUserId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereAutoBill($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereAutoBillEnabled($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereBackup($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereBalance($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereClientId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereCompanyId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereCreatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereCustomSurcharge1($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereCustomSurcharge2($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereCustomSurcharge3($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereCustomSurcharge4($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereCustomSurchargeTax1($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereCustomSurchargeTax2($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereCustomSurchargeTax3($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereCustomSurchargeTax4($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereCustomValue1($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereCustomValue2($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereCustomValue3($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereCustomValue4($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereDate($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereDeletedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereDiscount($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereDueDate($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereDueDateDays($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereExchangeRate($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereFooter($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereFrequencyId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereIsAmountDiscount($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereIsDeleted($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereLastSentDate($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereLastViewed($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereLineItems($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereNextSendDate($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereNumber($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote wherePaidToDate($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote wherePartial($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote wherePartialDueDate($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote wherePoNumber($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote wherePrivateNotes($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereProjectId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote wherePublicNotes($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereRemainingCycles($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereStatusId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereSubscriptionId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereTaxName1($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereTaxName2($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereTaxName3($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereTaxRate1($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereTaxRate2($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereTaxRate3($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereTerms($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereTotalTaxes($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereUpdatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereUserId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereUsesInclusiveTaxes($value)
- * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote whereVendorId($value)
  * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote withTrashed()
  * @method static \Illuminate\Database\Eloquent\Builder|RecurringQuote withoutTrashed()
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Backup> $history
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RecurringQuoteInvitation> $invitations
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Quote> $quotes
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Backup> $history
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RecurringQuoteInvitation> $invitations
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Quote> $quotes
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Backup> $history
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RecurringQuoteInvitation> $invitations
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Quote> $quotes
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Backup> $history
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RecurringQuoteInvitation> $invitations
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Quote> $quotes
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Backup> $history
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RecurringQuoteInvitation> $invitations
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Quote> $quotes
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Backup> $history
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RecurringQuoteInvitation> $invitations
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Quote> $quotes
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Backup> $history
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RecurringQuoteInvitation> $invitations
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Quote> $quotes
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Backup> $history
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RecurringQuoteInvitation> $invitations
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Quote> $quotes
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Backup> $history
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RecurringQuoteInvitation> $invitations
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Quote> $quotes
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Backup> $history
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RecurringQuoteInvitation> $invitations
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Quote> $quotes
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Backup> $history
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RecurringQuoteInvitation> $invitations
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Quote> $quotes
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Activity> $activities
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Document> $documents
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Backup> $history
@@ -247,44 +134,44 @@ class RecurringQuote extends BaseModel
     /**
      * Quote Statuses.
      */
-    const STATUS_DRAFT = 1;
+    public const STATUS_DRAFT = 1;
 
-    const STATUS_ACTIVE = 2;
+    public const STATUS_ACTIVE = 2;
 
-    const STATUS_PAUSED = 3;
+    public const STATUS_PAUSED = 3;
 
-    const STATUS_COMPLETED = 4;
+    public const STATUS_COMPLETED = 4;
 
-    const STATUS_PENDING = -1;
+    public const STATUS_PENDING = -1;
 
     /**
      * Quote Frequencies.
      */
-    const FREQUENCY_DAILY = 1;
+    public const FREQUENCY_DAILY = 1;
 
-    const FREQUENCY_WEEKLY = 2;
+    public const FREQUENCY_WEEKLY = 2;
 
-    const FREQUENCY_TWO_WEEKS = 3;
+    public const FREQUENCY_TWO_WEEKS = 3;
 
-    const FREQUENCY_FOUR_WEEKS = 4;
+    public const FREQUENCY_FOUR_WEEKS = 4;
 
-    const FREQUENCY_MONTHLY = 5;
+    public const FREQUENCY_MONTHLY = 5;
 
-    const FREQUENCY_TWO_MONTHS = 6;
+    public const FREQUENCY_TWO_MONTHS = 6;
 
-    const FREQUENCY_THREE_MONTHS = 7;
+    public const FREQUENCY_THREE_MONTHS = 7;
 
-    const FREQUENCY_FOUR_MONTHS = 8;
+    public const FREQUENCY_FOUR_MONTHS = 8;
 
-    const FREQUENCY_SIX_MONTHS = 9;
+    public const FREQUENCY_SIX_MONTHS = 9;
 
-    const FREQUENCY_ANNUALLY = 10;
+    public const FREQUENCY_ANNUALLY = 10;
 
-    const FREQUENCY_TWO_YEARS = 11;
+    public const FREQUENCY_TWO_YEARS = 11;
 
-    const FREQUENCY_THREE_YEARS = 12;
+    public const FREQUENCY_THREE_YEARS = 12;
 
-    const RECURS_INDEFINITELY = -1;
+    public const RECURS_INDEFINITELY = -1;
 
     protected $fillable = [
         'client_id',
@@ -439,7 +326,7 @@ class RecurringQuote extends BaseModel
         }
     }
 
-    public function nextSendDate() :?Carbon
+    public function nextSendDate(): ?Carbon
     {
         if (! $this->next_send_date) {
             return null;
@@ -519,7 +406,7 @@ class RecurringQuote extends BaseModel
         }
     }
 
-    public function remainingCycles() : int
+    public function remainingCycles(): int
     {
         if ($this->remaining_cycles == 0) {
             return 0;
@@ -530,7 +417,7 @@ class RecurringQuote extends BaseModel
         }
     }
 
-    public function setCompleted() :  void
+    public function setCompleted(): void
     {
         $this->status_id = self::STATUS_COMPLETED;
         $this->next_send_date = null;
@@ -556,7 +443,7 @@ class RecurringQuote extends BaseModel
         }
     }
 
-    public static function frequencyForKey(int $frequency_id) :string
+    public static function frequencyForKey(int $frequency_id): string
     {
         switch ($frequency_id) {
             case self::FREQUENCY_DAILY:
@@ -595,9 +482,9 @@ class RecurringQuote extends BaseModel
     {
         $invoice_calc = null;
 
-        if ($this->uses_inclusive_taxes) {            
+        if ($this->uses_inclusive_taxes) {
             $invoice_calc = new InvoiceSumInclusive($this);
-        } else {            
+        } else {
             $invoice_calc = new InvoiceSum($this);
         }
 
@@ -689,7 +576,7 @@ class RecurringQuote extends BaseModel
      * Service entry points.
      * @return RecurringService
      */
-    public function service() :RecurringService
+    public function service(): RecurringService
     {
         return new RecurringService($this);
     }

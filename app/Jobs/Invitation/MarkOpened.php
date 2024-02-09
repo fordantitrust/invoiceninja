@@ -22,7 +22,11 @@ use Illuminate\Queue\SerializesModels;
 
 class MarkOpened implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, NumberFormatter;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
+    use NumberFormatter;
 
     public $message_id;
 
@@ -45,7 +49,7 @@ class MarkOpened implements ShouldQueue
      * Execute the job.
      *
      *
-     * @return false
+     * @return void
      */
     public function handle()
     {

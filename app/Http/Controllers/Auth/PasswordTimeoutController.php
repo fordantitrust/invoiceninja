@@ -17,7 +17,6 @@ use Illuminate\Support\Facades\Cache;
 
 class PasswordTimeoutController extends Controller
 {
-
     public function __invoke()
     {
         $cached = Cache::get(auth()->user()->hashed_id.'_'.auth()->user()->account_id.'_logged_in');
@@ -25,4 +24,3 @@ class PasswordTimeoutController extends Controller
         return $cached ? response()->json(['message' => 'Password is valid'], 200) : response()->json(['message' => 'Invalid Password'], 412);
     }
 }
-

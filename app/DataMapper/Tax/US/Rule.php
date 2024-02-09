@@ -22,10 +22,9 @@ use App\Models\Product;
  */
 class Rule extends BaseRule implements RuleInterface
 {
-
     /** @var string $seller_region */
     public string $seller_region = 'US';
-    
+
     /**
      * Initializes the rules and builds any required data.
      *
@@ -37,7 +36,7 @@ class Rule extends BaseRule implements RuleInterface
 
         return $this;
     }
-    
+
     /**
      * Override tax class, we use this when we do not modify the input taxes
      *
@@ -46,15 +45,18 @@ class Rule extends BaseRule implements RuleInterface
      */
     public function override($item): self
     {
-        
+
         $this->tax_rate1 = $item->tax_rate1;
-        
         $this->tax_name1 = $item->tax_name1;
+        $this->tax_rate2 = $item->tax_rate2;
+        $this->tax_name2 = $item->tax_name2;
+        $this->tax_rate3 = $item->tax_rate3;
+        $this->tax_name3 = $item->tax_name3;
 
         return $this;
 
     }
-    
+
     /**
      * Sets the correct tax rate based on the product type.
      *
@@ -71,14 +73,14 @@ class Rule extends BaseRule implements RuleInterface
             Product::PRODUCT_TYPE_SHIPPING => $this->taxShipping($item),
             Product::PRODUCT_TYPE_PHYSICAL => $this->taxPhysical($item),
             Product::PRODUCT_TYPE_REDUCED_TAX => $this->taxReduced($item),
-            Product::PRODUCT_TYPE_OVERRIDE_TAX => $this->override($item), 
+            Product::PRODUCT_TYPE_OVERRIDE_TAX => $this->override($item),
             Product::PRODUCT_TYPE_ZERO_RATED => $this->zeroRated($item),
             default => $this->default($item),
         };
-        
+
         return $this;
     }
-    
+
     /**
      * Sets the tax as exempt (0)
      * @param  mixed $item
@@ -92,7 +94,7 @@ class Rule extends BaseRule implements RuleInterface
 
         return $this;
     }
-    
+
     /**
      * Calculates the tax rate for a digital product
      * @param  mixed $item
@@ -105,7 +107,7 @@ class Rule extends BaseRule implements RuleInterface
 
         return $this;
     }
-    
+
     /**
      * Calculates the tax rate for a service product
      * @param  mixed $item
@@ -114,13 +116,15 @@ class Rule extends BaseRule implements RuleInterface
      */
     public function taxService($item): self
     {
-        if(in_array($this->tax_data?->txbService,['Y','L'])) {
+        if(in_array($this->tax_data?->txbService, ['Y','L'])) {
             $this->default($item);
+        } else {
+            $this->taxExempt($item);
         }
 
         return $this;
     }
-    
+
     /**
      * Calculates the tax rate for a shipping product
      * @param  mixed $item
@@ -135,10 +139,10 @@ class Rule extends BaseRule implements RuleInterface
 
         $this->tax_rate1 = 0;
         $this->tax_name1 = '';
-        
+
         return $this;
     }
-    
+
     /**
      * Calculates the tax rate for a physical product
      * @param  mixed $item
@@ -151,7 +155,7 @@ class Rule extends BaseRule implements RuleInterface
 
         return $this;
     }
-    
+
     /**
      * Calculates the tax rate for an undefined product uses the default tax rate for the client county
      *
@@ -159,22 +163,21 @@ class Rule extends BaseRule implements RuleInterface
      */
     public function default($item): self
     {
-        
+
         if($this->tax_data?->stateSalesTax == 0) {
 
-            $this->tax_rate1 = $this->invoice->client->company->tax_data->regions->{$this->client_region}->subregions->{$this->client_subregion}->tax_rate;
-            $this->tax_name1 = "Sales Tax";
+            $this->tax_rate1 = 0;
+            $this->tax_name1 = '';
 
             return $this;
         }
 
         $this->tax_rate1 = $this->tax_data->taxSales * 100;
-        // $this->tax_name1 = "{$this->tax_data->geoState} Sales Tax";
         $this->tax_name1 = "Sales Tax";
 
         return $this;
     }
-    
+
     public function zeroRated($item): self
     {
 
